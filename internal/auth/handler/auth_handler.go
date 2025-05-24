@@ -1,10 +1,10 @@
 package handler
 
 import (
-	"github.com/example/go-user-service/internal/auth/model"
-	"github.com/example/go-user-service/internal/auth/service"
-	"github.com/example/go-user-service/pkg/response"
 	"github.com/gin-gonic/gin"
+	"github.com/tapas/go-user-service/internal/auth/model"
+	"github.com/tapas/go-user-service/internal/auth/service"
+	"github.com/tapas/go-user-service/pkg/response"
 ) // Import unified response package
 
 // AuthHandler 定义认证服务 Handler 接口

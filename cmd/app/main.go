@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/example/go-user-service/internal/user/model"
+	"github.com/tapas/go-user-service/internal/user/model"
 )
 
 func main() {

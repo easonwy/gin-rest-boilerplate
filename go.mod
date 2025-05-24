@@ -1,4 +1,4 @@
-module github.com/example/go-user-service
+module github.com/tapas/go-user-service
 
 go 1.24.3
 

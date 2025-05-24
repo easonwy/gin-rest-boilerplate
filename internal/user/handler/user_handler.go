@@ -4,10 +4,10 @@ import (
 	"net/http"
 	"strconv"
 
-	"github.com/example/go-user-service/internal/user/dto"
-	"github.com/example/go-user-service/internal/user/service"
-	"github.com/example/go-user-service/pkg/response"
 	"github.com/gin-gonic/gin"
+	"github.com/tapas/go-user-service/internal/user/dto"
+	"github.com/tapas/go-user-service/internal/user/service"
+	"github.com/tapas/go-user-service/pkg/response"
 )
 
 // UserHandler defines the interface for user handlers.

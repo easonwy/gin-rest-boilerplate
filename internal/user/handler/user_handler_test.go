@@ -9,12 +9,12 @@ import (
 	"testing"
 	"time"
 
-	"github.com/example/go-user-service/internal/user/dto"
-	"github.com/example/go-user-service/internal/user/model"
-	"github.com/example/go-user-service/pkg/response"
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
+	"github.com/tapas/go-user-service/internal/user/dto"
+	"github.com/tapas/go-user-service/internal/user/model"
+	"github.com/tapas/go-user-service/pkg/response"
 )
 
 // Helper function to get a pointer to a string

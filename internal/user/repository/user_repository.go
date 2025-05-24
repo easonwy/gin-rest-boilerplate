@@ -1,7 +1,7 @@
 package repository
 
 import (
-	"github.com/example/go-user-service/internal/user/model"
+	"github.com/tapas/go-user-service/internal/user/model"
 	"gorm.io/gorm"
 )
 

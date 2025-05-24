@@ -7,14 +7,14 @@
 package main
 
 import (
-	"github.com/example/go-user-service/internal/auth/handler"
-	"github.com/example/go-user-service/internal/auth/repository"
-	"github.com/example/go-user-service/internal/auth/service"
-	"github.com/example/go-user-service/internal/config"
-	"github.com/example/go-user-service/internal/provider"
-	"github.com/example/go-user-service/internal/user"
-	handler2 "github.com/example/go-user-service/internal/user/handler"
-	"github.com/example/go-user-service/pkg/middleware"
+	"github.com/tapas/go-user-service/internal/auth/handler"
+	"github.com/tapas/go-user-service/internal/auth/repository"
+	"github.com/tapas/go-user-service/internal/auth/service"
+	"github.com/tapas/go-user-service/internal/config"
+	"github.com/tapas/go-user-service/internal/provider"
+	"github.com/tapas/go-user-service/internal/user"
+	handler2 "github.com/tapas/go-user-service/internal/user/handler"
+	"github.com/tapas/go-user-service/pkg/middleware"
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
 )

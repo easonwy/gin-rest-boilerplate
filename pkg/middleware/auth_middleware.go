@@ -3,10 +3,10 @@ package middleware
 import (
 	"strings"
 
-	"github.com/example/go-user-service/internal/config"
-	"github.com/example/go-user-service/pkg/response"
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/tapas/go-user-service/internal/config"
+	"github.com/tapas/go-user-service/pkg/response"
 )
 
 // AuthMiddleware creates a Gin middleware for JWT authentication.

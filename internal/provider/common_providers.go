@@ -5,8 +5,8 @@ import (
 	"log"
 	"time"
 
-	"github.com/example/go-user-service/internal/config"
 	"github.com/go-redis/redis/v8"
+	"github.com/tapas/go-user-service/internal/config"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 )

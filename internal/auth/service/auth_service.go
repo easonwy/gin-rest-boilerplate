@@ -7,13 +7,13 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/example/go-user-service/internal/auth/model"
-	"github.com/example/go-user-service/internal/auth/repository"
-	"github.com/example/go-user-service/internal/config"
-	"github.com/example/go-user-service/internal/user/service"
 	"github.com/go-redis/redis/v8"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
+	"github.com/tapas/go-user-service/internal/auth/model"
+	"github.com/tapas/go-user-service/internal/auth/repository"
+	"github.com/tapas/go-user-service/internal/config"
+	"github.com/tapas/go-user-service/internal/user/service"
 	"golang.org/x/crypto/bcrypt"
 )
 
