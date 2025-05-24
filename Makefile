@@ -29,3 +29,23 @@ clean:
 run: build
 	@echo "Running $(SERVICE_NAME)..."
 	$(BUILD_DIR)/$(SERVICE_NAME)
+
+# --- Database Migration --- 
+
+MIGRATE_CLI = migrate
+MIGRATE_DIR = ./migrations
+DB_URL = $(DATABASE_URL) # Use DATABASE_URL environment variable
+
+.PHONY: migrate-create migrate-up migrate-down
+
+migrate-create:
+	@echo "Creating migration file..."
+	$(MIGRATE_CLI) create -ext sql -dir $(MIGRATE_DIR) $(name)
+
+migrate-up:
+	@echo "Running migrations up..."
+	$(MIGRATE_CLI) -database $(DB_URL) -path $(MIGRATE_DIR) up
+
+migrate-down:
+	@echo "Running migrations down..."
+	$(MIGRATE_CLI) -database $(DB_URL) -path $(MIGRATE_DIR) down
