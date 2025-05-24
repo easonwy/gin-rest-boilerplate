@@ -58,10 +58,13 @@ func NewRouter(userHdl userHandler.UserHandler, authHandler authHandler.AuthHand
 		})
 	})
 
+	// 公开的用户路由
+	r.POST("/users/register", userHdl.Register)
+
+	// 需要认证的用户路由
 	userGroup := r.Group("/users")
 	userGroup.Use(authMiddleware) // Apply JWT auth middleware
 	{
-		userGroup.POST("/register", userHdl.Register)
 		userGroup.GET("/:id", userHdl.GetUserByID)
 		userGroup.GET("/", userHdl.GetUserByEmail)
 		userGroup.PUT("/:id", userHdl.UpdateUser)

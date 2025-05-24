@@ -30,6 +30,16 @@ func NewUserHandler(userService service.UserService) UserHandler {
 }
 
 // Register handles user registration requests.
+// @Summary Register a new user
+// @Description Register a new user with username, password, and email
+// @Tags users
+// @Accept  json
+// @Produce  json
+// @Param   user     body    dto.UserRegisterRequest     true        "User registration request"
+// @Success 200 {object} response.Response{data=dto.UserResponse} "Successfully registered user"
+// @Failure 400 {object} response.Response "Invalid request body"
+// @Failure 500 {object} response.Response "Failed to register user"
+// @Router /users/register [post]
 func (h *userHandler) Register(c *gin.Context) {
 	var req dto.UserRegisterRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -48,6 +58,18 @@ func (h *userHandler) Register(c *gin.Context) {
 }
 
 // GetUserByID handles requests to get a user by ID.
+// @Summary Get a user by ID
+// @Description Get a user's details by their ID
+// @Tags users
+// @Accept  json
+// @Produce  json
+// @Param   id     path    int     true        "User ID"
+// @Success 200 {object} response.Response{data=dto.UserResponse} "Successfully retrieved user"
+// @Failure 400 {object} response.Response "Invalid user ID"
+// @Failure 404 {object} response.Response "User not found"
+// @Failure 500 {object} response.Response "Failed to get user"
+// @Security BearerAuth
+// @Router /users/{id} [get]
 func (h *userHandler) GetUserByID(c *gin.Context) {
 	idStr := c.Param("id")
 	id, err := strconv.ParseUint(idStr, 10, 64)
@@ -81,6 +103,18 @@ func (h *userHandler) GetUserByID(c *gin.Context) {
 }
 
 // GetUserByEmail handles requests to get a user by email.
+// @Summary Get a user by email
+// @Description Get a user's details by their email address
+// @Tags users
+// @Accept  json
+// @Produce  json
+// @Param   email     query    string     true        "User email"
+// @Success 200 {object} response.Response{data=dto.UserResponse} "Successfully retrieved user"
+// @Failure 400 {object} response.Response "Email query parameter is required"
+// @Failure 404 {object} response.Response "User not found"
+// @Failure 500 {object} response.Response "Failed to get user"
+// @Security BearerAuth
+// @Router /users/email [get]
 func (h *userHandler) GetUserByEmail(c *gin.Context) {
 	email := c.Query("email")
 	if email == "" {
@@ -113,6 +147,18 @@ func (h *userHandler) GetUserByEmail(c *gin.Context) {
 }
 
 // UpdateUser handles requests to update a user.
+// @Summary Update an existing user
+// @Description Update an existing user's details by their ID
+// @Tags users
+// @Accept  json
+// @Produce  json
+// @Param   id     path    int     true        "User ID"
+// @Param   user     body    dto.UserUpdateRequest     true        "User update request"
+// @Success 200 {object} response.Response{data=dto.UserResponse} "Successfully updated user"
+// @Failure 400 {object} response.Response "Invalid user ID or request body"
+// @Failure 500 {object} response.Response "Failed to update user"
+// @Security BearerAuth
+// @Router /users/{id} [put]
 func (h *userHandler) UpdateUser(c *gin.Context) {
 	idStr := c.Param("id")
 	id, err := strconv.ParseUint(idStr, 10, 64)
@@ -122,7 +168,7 @@ func (h *userHandler) UpdateUser(c *gin.Context) {
 	}
 
 	var req dto.UserUpdateRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
+	if err = c.ShouldBindJSON(&req); err != nil {
 		response.BadRequest(c, "Invalid request body")
 		return
 	}
@@ -147,6 +193,17 @@ func (h *userHandler) UpdateUser(c *gin.Context) {
 }
 
 // DeleteUser handles requests to delete a user.
+// @Summary Delete a user by ID
+// @Description Delete a user by their ID
+// @Tags users
+// @Accept  json
+// @Produce  json
+// @Param   id     path    int     true        "User ID"
+// @Success 200 {object} response.Response{data=object{message=string}} "Successfully deleted user"
+// @Failure 400 {object} response.Response "Invalid user ID"
+// @Failure 500 {object} response.Response "Failed to delete user"
+// @Security BearerAuth
+// @Router /users/{id} [delete]
 func (h *userHandler) DeleteUser(c *gin.Context) {
 	idStr := c.Param("id")
 	id, err := strconv.ParseUint(idStr, 10, 64)
