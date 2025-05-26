@@ -67,8 +67,8 @@ func NewRouter(userHdl userHandler.UserHandler, authHandler authHandler.AuthHand
 	userGroup := api.Group("/users")
 	userGroup.Use(authMiddleware) // Apply JWT auth middleware
 	{
+		userGroup.GET("/email", userHdl.GetUserByEmail)
 		userGroup.GET("/:id", userHdl.GetUserByID)
-		userGroup.GET("/", userHdl.GetUserByEmail)
 		userGroup.PUT("/:id", userHdl.UpdateUser)
 		userGroup.DELETE("/:id", userHdl.DeleteUser)
 		// TODO: Add other user routes

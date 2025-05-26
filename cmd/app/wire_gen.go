@@ -88,8 +88,8 @@ func NewRouter(userHdl handler2.UserHandler, authHandler handler.AuthHandler, au
 	userGroup := api.Group("/users")
 	userGroup.Use(authMiddleware)
 	{
+		userGroup.GET("/email", userHdl.GetUserByEmail)
 		userGroup.GET("/:id", userHdl.GetUserByID)
-		userGroup.GET("/", userHdl.GetUserByEmail)
 		userGroup.PUT("/:id", userHdl.UpdateUser)
 		userGroup.DELETE("/:id", userHdl.DeleteUser)
 

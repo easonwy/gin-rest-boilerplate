@@ -49,13 +49,13 @@ func AuthMiddleware(cfg *config.Config) gin.HandlerFunc {
 		// 提取 claims
 		if claims, ok := token.Claims.(jwt.MapClaims); ok && token.Valid {
 			// 将用户 ID 存储到 Gin 上下文
-			userID, ok := claims["user_id"].(string)
+			userID, ok := claims["user_id"].(float64)
 			if !ok {
 				response.InternalServerError(c, "User ID not found in token claims")
 				c.Abort()
 				return
 			}
-			c.Set("userID", userID)
+			c.Set("userID", int(userID))
 
 			// 继续处理请求
 			c.Next()
