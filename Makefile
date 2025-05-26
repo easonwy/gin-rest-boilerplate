@@ -33,7 +33,7 @@ run: build
 # Regenerate wire dependency injection code
 wire:
 	@echo "Regenerating wire dependency injection code..."
-	cd $(CMD_DIR) && wire
+	cd $(CMD_DIR)/wire && wire
 	@echo "Wire code generation complete."
 
 # --- Database Migration --- 

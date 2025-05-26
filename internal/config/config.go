@@ -43,10 +43,6 @@ func LoadConfig() (*Config, error) {
 		env = "dev" // Default to dev environment
 	}
 
-	cwd, _ := os.Getwd()
-	fmt.Println("👉 Current working dir:", cwd)
-	fmt.Println("👉 Loading config for environment:", env)
-
 	v := viper.New()
 	v.SetConfigName(fmt.Sprintf("config.%s", env))
 	v.SetConfigType("yaml")

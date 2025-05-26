@@ -4,7 +4,7 @@
 //go:build !wireinject
 // +build !wireinject
 
-package main
+package wire
 
 import (
 	"github.com/gin-gonic/gin"
@@ -18,10 +18,6 @@ import (
 	"github.com/tapas/go-user-service/pkg/middleware"
 	"go.uber.org/zap"
 	"gorm.io/gorm"
-)
-
-import (
-	_ "github.com/tapas/go-user-service/docs"
 )
 
 // Injectors from wire.go:
