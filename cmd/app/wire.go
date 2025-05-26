@@ -38,7 +38,6 @@ func InitializeApp() (*App, error) {
 		authService.NewAuthService,
 		authHandler.NewAuthHandler,
 		middleware.AuthMiddleware,
-		middleware.LoggingMiddleware,
 		authRepository.NewAuthRepository,
 		NewRouter,
 		wire.Struct(new(App), "Router", "DB", "Config"),
@@ -58,11 +57,14 @@ func NewRouter(userHdl userHandler.UserHandler, authHandler authHandler.AuthHand
 		})
 	})
 
+	// API v1 group with base path
+	api := r.Group("/api/v1")
+
 	// 公开的用户路由
-	r.POST("/users/register", userHdl.Register)
+	api.POST("/users/register", userHdl.Register)
 
 	// 需要认证的用户路由
-	userGroup := r.Group("/users")
+	userGroup := api.Group("/users")
 	userGroup.Use(authMiddleware) // Apply JWT auth middleware
 	{
 		userGroup.GET("/:id", userHdl.GetUserByID)
@@ -72,14 +74,14 @@ func NewRouter(userHdl userHandler.UserHandler, authHandler authHandler.AuthHand
 		// TODO: Add other user routes
 	}
 
-	authGroup := r.Group("/auth")
+	authGroup := api.Group("/auth")
 	{
 		authGroup.POST("/login", authHandler.Login)
 		authGroup.POST("/refresh-token", authHandler.RefreshToken)
 		// TODO: Add other auth routes
 	}
 
-	authProtectedGroup := r.Group("/auth")
+	authProtectedGroup := api.Group("/auth")
 	authProtectedGroup.Use(authMiddleware) // Apply JWT auth middleware
 	{
 		authProtectedGroup.POST("/logout", authHandler.Logout)

@@ -40,7 +40,7 @@ type JWTConfig struct {
 func LoadConfig() (*Config, error) {
 	env := os.Getenv("APP_ENV")
 	if env == "" {
-		env = "development" // Default to development
+		env = "dev" // Default to dev environment
 	}
 
 	v := viper.New()

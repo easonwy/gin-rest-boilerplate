@@ -1,6 +1,6 @@
 app:
   name: "User Auth Service (Dev)"
-  env: "development"
+  env: "dev"
   port: 8080
 
 database:

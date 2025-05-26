@@ -7,6 +7,7 @@
 package main
 
 import (
+	"github.com/gin-gonic/gin"
 	"github.com/tapas/go-user-service/internal/auth/handler"
 	"github.com/tapas/go-user-service/internal/auth/repository"
 	"github.com/tapas/go-user-service/internal/auth/service"
@@ -15,8 +16,12 @@ import (
 	"github.com/tapas/go-user-service/internal/user"
 	handler2 "github.com/tapas/go-user-service/internal/user/handler"
 	"github.com/tapas/go-user-service/pkg/middleware"
-	"github.com/gin-gonic/gin"
+	"go.uber.org/zap"
 	"gorm.io/gorm"
+)
+
+import (
+	_ "github.com/tapas/go-user-service/docs"
 )
 
 // Injectors from wire.go:
@@ -42,7 +47,11 @@ func InitializeApp() (*App, error) {
 	authService := service.NewAuthService(userService, authRepository, client, config)
 	authHandler := handler.NewAuthHandler(authService)
 	handlerFunc := middleware.AuthMiddleware(config)
-	engine := NewRouter(userHandler, authHandler, handlerFunc)
+	logger, err := provider.ProvideLogger()
+	if err != nil {
+		return nil, err
+	}
+	engine := NewRouter(userHandler, authHandler, handlerFunc, logger)
 	app := &App{
 		Router: engine,
 		DB:     db,
@@ -61,8 +70,10 @@ type App struct {
 }
 
 // NewRouter creates a new Gin router and sets up routes.
-func NewRouter(userHdl handler2.UserHandler, authHandler handler.AuthHandler, authMiddleware gin.HandlerFunc) *gin.Engine {
+func NewRouter(userHdl handler2.UserHandler, authHandler handler.AuthHandler, authMiddleware gin.HandlerFunc, logger *zap.Logger) *gin.Engine {
 	r := gin.Default()
+
+	r.Use(middleware.LoggingMiddleware(logger))
 
 	r.GET("/ping", func(c *gin.Context) {
 		c.JSON(200, gin.H{
@@ -70,10 +81,13 @@ func NewRouter(userHdl handler2.UserHandler, authHandler handler.AuthHandler, au
 		})
 	})
 
-	userGroup := r.Group("/users")
+	api := r.Group("/api/v1")
+
+	api.POST("/users/register", userHdl.Register)
+
+	userGroup := api.Group("/users")
 	userGroup.Use(authMiddleware)
 	{
-		userGroup.POST("/register", userHdl.Register)
 		userGroup.GET("/:id", userHdl.GetUserByID)
 		userGroup.GET("/", userHdl.GetUserByEmail)
 		userGroup.PUT("/:id", userHdl.UpdateUser)
@@ -81,14 +95,14 @@ func NewRouter(userHdl handler2.UserHandler, authHandler handler.AuthHandler, au
 
 	}
 
-	authGroup := r.Group("/auth")
+	authGroup := api.Group("/auth")
 	{
 		authGroup.POST("/login", authHandler.Login)
 		authGroup.POST("/refresh-token", authHandler.RefreshToken)
 
 	}
 
-	authProtectedGroup := r.Group("/auth")
+	authProtectedGroup := api.Group("/auth")
 	authProtectedGroup.Use(authMiddleware)
 	{
 		authProtectedGroup.POST("/logout", authHandler.Logout)

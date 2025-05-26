@@ -1,6 +1,6 @@
 # Makefile for go-user-service
 
-.PHONY: build test clean run
+.PHONY: build test clean run wire
 
 # Define variables
 SERVICE_NAME = go-user-service
@@ -29,6 +29,12 @@ clean:
 run: build
 	@echo "Running $(SERVICE_NAME)..."
 	$(BUILD_DIR)/$(SERVICE_NAME)
+
+# Regenerate wire dependency injection code
+wire:
+	@echo "Regenerating wire dependency injection code..."
+	cd $(CMD_DIR) && wire
+	@echo "Wire code generation complete."
 
 # --- Database Migration --- 
 

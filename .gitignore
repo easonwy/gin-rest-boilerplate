@@ -23,6 +23,7 @@ go.work.sum
 
 # Log files
 *.log
+*.out
 
 # IDE specific files
 .idea/
