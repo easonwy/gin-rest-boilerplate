@@ -37,8 +37,8 @@ func InitializeApp() (*App, error) {
 		user.ProvideUserHandler,
 		authService.NewAuthService,
 		authHandler.NewAuthHandler,
-		middleware.AuthMiddleware,
 		authRepository.NewAuthRepository,
+		middleware.AuthMiddleware,
 		NewRouter,
 		wire.Struct(new(App), "Router", "DB", "Config"),
 	)

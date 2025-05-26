@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"strconv"
 	"time"
 
 	"github.com/go-redis/redis/v8"
@@ -28,16 +27,14 @@ type AuthService interface {
 type authService struct {
 	userService service.UserService
 	authRepo    repository.AuthRepository
-	redisClient *redis.Client // Keep redisClient for now, will remove after full repo integration
 	config      *config.Config
 }
 
 // NewAuthService 创建新的认证服务实例
-func NewAuthService(userService service.UserService, authRepo repository.AuthRepository, redisClient *redis.Client, config *config.Config) AuthService {
+func NewAuthService(userService service.UserService, authRepo repository.AuthRepository, config *config.Config) AuthService {
 	return &authService{
 		userService: userService,
 		authRepo:    authRepo,
-		redisClient: redisClient,
 		config:      config,
 	}
 }
@@ -77,7 +74,11 @@ func (s *authService) Login(req model.LoginRequest) (*model.LoginResponse, error
 	refreshToken := uuid.New().String()
 	refreshTokenExpiry := time.Duration(s.config.JWT.RefreshTokenExpireDays) * 24 * time.Hour
 
-	err = s.authRepo.SetRefreshToken(context.Background(), user.ID, refreshToken, refreshTokenExpiry)
+	err = s.authRepo.SetUserRefreshToken(context.Background(), user.ID, refreshToken, refreshTokenExpiry)
+	if err != nil {
+		return nil, fmt.Errorf("failed to store user refresh token: %w", err)
+	}
+	err = s.authRepo.SetRefreshTokenUserID(context.Background(), refreshToken, user.ID, refreshTokenExpiry)
 	if err != nil {
 		return nil, fmt.Errorf("failed to store refresh token: %w", err)
 	}
@@ -105,19 +106,12 @@ func (s *authService) RefreshToken(refreshToken string) (*model.LoginResponse, e
 	// For now, let's revert to the previous Redis logic to unblock the build
 	// and address the repository mapping later.
 
-	// Reverting to direct Redis call for refresh token to user ID mapping
-	userIDStr, err := s.redisClient.Get(context.Background(), refreshToken).Result()
+	userID, err := s.authRepo.GetUserIDByRefreshToken(context.Background(), refreshToken)
 	if err != nil {
 		if err == redis.Nil {
 			return nil, errors.New("invalid or expired refresh token")
 		}
-		return nil, fmt.Errorf("failed to get user ID from redis: %w", err)
-	}
-
-	// Convert userID string to uint
-	userID, err := strconv.ParseUint(userIDStr, 10, 64)
-	if err != nil {
-		return nil, fmt.Errorf("failed to parse user ID from redis: %w", err)
+		return nil, fmt.Errorf("failed to get user ID from refresh token: %w", err)
 	}
 
 	// 2. 通过用户服务查找用户
@@ -144,7 +138,11 @@ func (s *authService) RefreshToken(refreshToken string) (*model.LoginResponse, e
 	newRefreshToken := uuid.New().String()
 	refreshTokenExpiry := time.Duration(s.config.JWT.RefreshTokenExpireDays) * 24 * time.Hour
 
-	err = s.authRepo.SetRefreshToken(context.Background(), uint(userID), newRefreshToken, refreshTokenExpiry)
+	err = s.authRepo.SetUserRefreshToken(context.Background(), uint(userID), newRefreshToken, refreshTokenExpiry)
+	if err != nil {
+		return nil, fmt.Errorf("failed to store new user refresh token: %w", err)
+	}
+	err = s.authRepo.SetRefreshTokenUserID(context.Background(), newRefreshToken, uint(userID), refreshTokenExpiry)
 	if err != nil {
 		return nil, fmt.Errorf("failed to store new refresh token: %w", err)
 	}
@@ -153,11 +151,13 @@ func (s *authService) RefreshToken(refreshToken string) (*model.LoginResponse, e
 	// The repository's DeleteRefreshToken method expects a user ID.
 	// We need to delete the refresh token using the token string itself as the key.
 
-	// Reverting to direct Redis call for deleting refresh token by token string
-	err = s.redisClient.Del(context.Background(), refreshToken).Err()
+	err = s.authRepo.DeleteRefreshTokenUserID(context.Background(), refreshToken)
 	if err != nil {
-		// Log the error but don't return, as the new token is already stored
-		fmt.Printf("failed to delete old refresh token from redis: %v\n", err)
+		fmt.Printf("failed to delete old refresh token to user ID mapping: %v\n", err)
+	}
+	err = s.authRepo.DeleteUserRefreshToken(context.Background(), uint(userID))
+	if err != nil {
+		fmt.Printf("failed to delete old user refresh token: %v\n", err)
 	}
 
 	// 6. 返回新的 LoginResponse
@@ -171,7 +171,7 @@ func (s *authService) RefreshToken(refreshToken string) (*model.LoginResponse, e
 // Logout handles user logout logic
 func (s *authService) Logout(ctx context.Context, userID uint) error {
 	// Delete the refresh token associated with the user ID
-	err := s.authRepo.DeleteRefreshToken(ctx, userID)
+	err := s.authRepo.DeleteUserRefreshToken(ctx, userID)
 	if err != nil {
 		return fmt.Errorf("failed to delete refresh token during logout: %w", err)
 	}

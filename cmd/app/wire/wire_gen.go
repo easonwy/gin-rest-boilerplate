@@ -40,9 +40,9 @@ func InitializeApp() (*App, error) {
 		return nil, err
 	}
 	authRepository := repository.NewAuthRepository(client)
-	authService := service.NewAuthService(userService, authRepository, client, config)
+	authService := service.NewAuthService(userService, authRepository, config)
 	authHandler := handler.NewAuthHandler(authService)
-	handlerFunc := middleware.AuthMiddleware(config)
+	handlerFunc := middleware.AuthMiddleware(config, authRepository)
 	logger, err := provider.ProvideLogger()
 	if err != nil {
 		return nil, err

@@ -3,6 +3,7 @@
 *.dll
 *.so
 *.dylib
+app
 
 # Test binaries
 *_test
@@ -24,10 +25,11 @@ go.work.sum
 # Log files
 *.log
 *.out
+__debug_bin*
 
 # IDE specific files
 .idea/
-.vscode/
+# .vscode/
 *.swp
 *.swo
 
