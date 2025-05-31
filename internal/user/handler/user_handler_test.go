@@ -12,9 +12,9 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
-	"github.com/tapas/go-user-service/internal/user/dto"
-	"github.com/tapas/go-user-service/internal/user/model"
-	"github.com/tapas/go-user-service/pkg/response"
+	"github.com/yi-tech/go-user-service/internal/user/dto"
+	"github.com/yi-tech/go-user-service/internal/user/model"
+	"github.com/yi-tech/go-user-service/pkg/response"
 )
 
 // Helper function to get a pointer to a string

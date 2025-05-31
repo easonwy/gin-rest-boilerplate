@@ -5,9 +5,9 @@ import (
 	"strconv"
 
 	"github.com/gin-gonic/gin"
-	"github.com/tapas/go-user-service/internal/user/dto"
-	"github.com/tapas/go-user-service/internal/user/service"
-	"github.com/tapas/go-user-service/pkg/response"
+	"github.com/yi-tech/go-user-service/internal/user/dto"
+	"github.com/yi-tech/go-user-service/internal/user/service"
+	"github.com/yi-tech/go-user-service/pkg/response"
 )
 
 // UserHandler defines the interface for user handlers.

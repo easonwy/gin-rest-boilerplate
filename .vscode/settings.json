@@ -26,5 +26,6 @@
         },
         "apiVersion": 2,
         "showGlobalVariables": true
-    }
+    },
+    "makefile.configureOnOpen": false
 }

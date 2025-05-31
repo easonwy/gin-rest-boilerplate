@@ -16,3 +16,6 @@ jwt:
   secret: "development_secret_key"
   access_token_expire_minutes: 15
   refresh_token_expire_days: 7
+
+grpc:
+  port: 50051

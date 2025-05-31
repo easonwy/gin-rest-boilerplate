@@ -1,0 +1,116 @@
+syntax = "proto3";
+
+package user.v1;
+
+import "google/protobuf/timestamp.proto";
+import "google/api/annotations.proto";
+import "protoc-gen-openapiv2/options/annotations.proto";
+
+option go_package = "github.com/yi-tech/go-user-service/api/proto/user/v1;userpb";
+option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_swagger) = {
+  info: {
+    title: "User Service API";
+    version: "1.0";
+    contact: {
+      name: "Yi Tech Lab";
+      url: "https://github.com/yi-tech";
+    };
+  };
+  schemes: HTTP;
+  schemes: HTTPS;
+  consumes: "application/json";
+  produces: "application/json";
+};
+
+// User service definition
+service UserService {
+  // Register a new user
+  rpc Register(RegisterRequest) returns (UserResponse) {
+    option (google.api.http) = {
+      post: "/v1/auth/register"
+      body: "*"
+    };
+  }
+  
+  // Login a user
+  rpc Login(LoginRequest) returns (LoginResponse) {
+    option (google.api.http) = {
+      post: "/v1/auth/login"
+      body: "*"
+    };
+  }
+  
+  // Get user profile
+  rpc GetProfile(GetProfileRequest) returns (UserResponse) {
+    option (google.api.http) = {
+      get: "/v1/users/{id}"
+    };
+  }
+  
+  // Update user profile
+  rpc UpdateProfile(UpdateProfileRequest) returns (UserResponse) {
+    option (google.api.http) = {
+      put: "/v1/users/{id}"
+      body: "*"
+    };
+  }
+  
+  // Delete user
+  rpc DeleteUser(DeleteUserRequest) returns (DeleteUserResponse) {
+    option (google.api.http) = {
+      delete: "/v1/users/{id}"
+    };
+  }
+}
+
+// User message represents a user in the system
+message User {
+  string id = 1;
+  string username = 2;
+  string email = 3;
+  string full_name = 4 [json_name = "full_name"];
+  bool is_active = 5 [json_name = "is_active"];
+  google.protobuf.Timestamp created_at = 6 [json_name = "created_at"];
+  google.protobuf.Timestamp updated_at = 7 [json_name = "updated_at"];
+}
+
+// Requests and Responses
+message RegisterRequest {
+  string username = 1;
+  string email = 2;
+  string password = 3;
+  string full_name = 4 [json_name = "full_name"];
+}
+
+message LoginRequest {
+  string username = 1;
+  string password = 2;
+}
+
+message LoginResponse {
+  string access_token = 1 [json_name = "access_token"];
+  string refresh_token = 2 [json_name = "refresh_token"];
+  User user = 3;
+}
+
+message GetProfileRequest {
+  string id = 1;
+}
+
+message UpdateProfileRequest {
+  string id = 1;
+  string full_name = 2 [json_name = "full_name"];
+  string email = 3;
+}
+
+message DeleteUserRequest {
+  string id = 1;
+}
+
+message DeleteUserResponse {
+  bool success = 1;
+}
+
+message UserResponse {
+  User user = 1;
+}

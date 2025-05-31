@@ -1,9 +1,9 @@
 package user
 
 import (
-	"github.com/tapas/go-user-service/internal/user/handler"
-	"github.com/tapas/go-user-service/internal/user/repository"
-	"github.com/tapas/go-user-service/internal/user/service"
+	"github.com/yi-tech/go-user-service/internal/user/handler"
+	"github.com/yi-tech/go-user-service/internal/user/repository"
+	"github.com/yi-tech/go-user-service/internal/user/service"
 	"gorm.io/gorm"
 )
 

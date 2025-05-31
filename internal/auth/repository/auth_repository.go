@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/go-redis/redis/v8"
-	"github.com/tapas/go-user-service/internal/config"
+	"github.com/yi-tech/go-user-service/internal/config"
 )
 
 // AuthRepository defines the interface for authentication data operations.

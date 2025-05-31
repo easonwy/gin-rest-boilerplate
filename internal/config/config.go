@@ -8,10 +8,11 @@ import (
 )
 
 type Config struct {
-	App      AppConfig
-	Database DatabaseConfig
-	Redis    RedisConfig
-	JWT      JWTConfig
+	App      AppConfig      `mapstructure:"app"`
+	Database DatabaseConfig `mapstructure:"database"`
+	Redis    RedisConfig    `mapstructure:"redis"`
+	JWT      JWTConfig      `mapstructure:"jwt"`
+	GRPC     GRPCConfig     `mapstructure:"grpc"`
 }
 
 type AppConfig struct {
@@ -35,6 +36,10 @@ type JWTConfig struct {
 	Secret                   string `mapstructure:"secret"`
 	AccessTokenExpireMinutes int    `mapstructure:"access_token_expire_minutes"`
 	RefreshTokenExpireDays   int    `mapstructure:"refresh_token_expire_days"`
+}
+
+type GRPCConfig struct {
+	Port int `mapstructure:"port"`
 }
 
 func LoadConfig() (*Config, error) {

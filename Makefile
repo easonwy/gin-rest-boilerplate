@@ -1,6 +1,6 @@
 # Makefile for go-user-service
 
-.PHONY: build test clean run wire
+.PHONY: build test clean run wire proto proto-clean proto-gen proto-swagger
 
 # Define variables
 SERVICE_NAME = go-user-service
@@ -35,6 +35,32 @@ wire:
 	@echo "Regenerating wire dependency injection code..."
 	cd $(CMD_DIR)/wire && wire
 	@echo "Wire code generation complete."
+
+# --- Protobuf Generation ---
+
+PROTO_DIR = ./api/proto
+PROTO_OUT = ./internal/grpc
+SWAGGER_OUT = ./docs/swagger
+
+# Install protoc and required plugins
+proto-install:
+	go install google.golang.org/protobuf/cmd/protoc-gen-go@latest
+	go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@latest
+	go install github.com/grpc-ecosystem/grpc-gateway/v2/protoc-gen-grpc-gateway@latest
+	go install github.com/grpc-ecosystem/grpc-gateway/v2/protoc-gen-openapiv2@latest
+
+# Clean generated protobuf files
+proto-clean:
+	rm -rf $(PROTO_OUT)/*
+	rm -rf $(SWAGGER_OUT)/*
+
+# Generate protobuf code and swagger docs
+proto-gen: proto-clean
+	cd $(PROTO_DIR) && buf generate
+
+# Generate swagger docs
+proto-swagger: proto-gen
+	@echo "Swagger documentation generated at $(SWAGGER_OUT)/user_service.swagger.json"
 
 # --- Database Migration --- 
 

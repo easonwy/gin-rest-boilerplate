@@ -5,10 +5,10 @@ app:
 
 database:
   driver: "postgres"
-  source: "host=host.docker.internal port=5432 user=ewu password=123456 dbname=user_auth_dev sslmode=disable"
+  source: "host=localhost port=5432 user=ewu password=123456 dbname=user_auth_dev sslmode=disable"
 
 redis:
-  addr: "host.docker.internal:6379"
+  addr: "localhost:6379"
   password: ""
   db: 0
 
@@ -16,3 +16,6 @@ jwt:
   secret: "local_secret_key"
   access_token_expire_minutes: 15
   refresh_token_expire_days: 7
+
+grpc:
+  port: 50051

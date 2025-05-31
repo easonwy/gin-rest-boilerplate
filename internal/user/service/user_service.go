@@ -4,9 +4,9 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/tapas/go-user-service/internal/user/dto"
-	"github.com/tapas/go-user-service/internal/user/model"
-	"github.com/tapas/go-user-service/internal/user/repository"
+	"github.com/yi-tech/go-user-service/internal/user/dto"
+	"github.com/yi-tech/go-user-service/internal/user/model"
+	"github.com/yi-tech/go-user-service/internal/user/repository"
 )
 
 var (

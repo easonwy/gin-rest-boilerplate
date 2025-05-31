@@ -8,16 +8,18 @@ package wire
 
 import (
 	"github.com/gin-gonic/gin"
-	"github.com/tapas/go-user-service/internal/auth/handler"
-	"github.com/tapas/go-user-service/internal/auth/repository"
-	"github.com/tapas/go-user-service/internal/auth/service"
-	"github.com/tapas/go-user-service/internal/config"
-	"github.com/tapas/go-user-service/internal/provider"
-	"github.com/tapas/go-user-service/internal/user"
-	handler2 "github.com/tapas/go-user-service/internal/user/handler"
-	"github.com/tapas/go-user-service/pkg/middleware"
+	"github.com/yi-tech/go-user-service/internal/auth/handler"
+	"github.com/yi-tech/go-user-service/internal/auth/repository"
+	"github.com/yi-tech/go-user-service/internal/auth/service"
+	"github.com/yi-tech/go-user-service/internal/config"
+	"github.com/yi-tech/go-user-service/internal/grpc"
+	"github.com/yi-tech/go-user-service/internal/provider"
+	"github.com/yi-tech/go-user-service/internal/user"
+	handler2 "github.com/yi-tech/go-user-service/internal/user/handler"
+	"github.com/yi-tech/go-user-service/pkg/middleware"
 	"go.uber.org/zap"
 	"gorm.io/gorm"
+	"net/http"
 )
 
 // Injectors from wire.go:
@@ -48,60 +50,81 @@ func InitializeApp() (*App, error) {
 		return nil, err
 	}
 	engine := NewRouter(userHandler, authHandler, handlerFunc, logger)
+	grpcConfig := ProvideGRPCConfig(config)
+	server := grpc.NewServer(userService, grpcConfig)
 	app := &App{
-		Router: engine,
-		DB:     db,
-		Config: config,
+		Router:     engine,
+		DB:         db,
+		Config:     config,
+		GRPCServer: server,
 	}
 	return app, nil
 }
 
 // wire.go:
 
+// ProvideGRPCConfig provides the gRPC server configuration
+func ProvideGRPCConfig(cfg *config.Config) *grpc.Config {
+	return &grpc.Config{
+		GRPCPort: cfg.GRPC.Port,
+		HTTPPort: cfg.GRPC.Port + 1,
+	}
+}
+
 // App represents the main application structure.
 type App struct {
-	Router *gin.Engine
-	DB     *gorm.DB
-	Config *config.Config
+	Router     *gin.Engine
+	DB         *gorm.DB
+	Config     *config.Config
+	GRPCServer *grpc.Server // gRPC server instance
 }
 
 // NewRouter creates a new Gin router and sets up routes.
-func NewRouter(userHdl handler2.UserHandler, authHandler handler.AuthHandler, authMiddleware gin.HandlerFunc, logger *zap.Logger) *gin.Engine {
+func NewRouter(userHdl handler2.UserHandler, authHdl handler.AuthHandler, authMiddleware gin.HandlerFunc, logger *zap.Logger) *gin.Engine {
 	r := gin.Default()
 
-	r.Use(middleware.LoggingMiddleware(logger))
-
-	r.GET("/ping", func(c *gin.Context) {
-		c.JSON(200, gin.H{
-			"message": "pong",
+	r.GET("/health", func(c *gin.Context) {
+		c.JSON(http.StatusOK, gin.H{
+			"status": "ok",
 		})
 	})
 
-	api := r.Group("/api/v1")
-
-	api.POST("/users/register", userHdl.Register)
-
-	userGroup := api.Group("/users")
-	userGroup.Use(authMiddleware)
+	v1 := r.Group("/api/v1")
 	{
-		userGroup.GET("/email", userHdl.GetUserByEmail)
-		userGroup.GET("/:id", userHdl.GetUserByID)
-		userGroup.PUT("/:id", userHdl.UpdateUser)
-		userGroup.DELETE("/:id", userHdl.DeleteUser)
 
-	}
+		public := v1.Group("/")
+		{
 
-	authGroup := api.Group("/auth")
-	{
-		authGroup.POST("/login", authHandler.Login)
-		authGroup.POST("/refresh-token", authHandler.RefreshToken)
+			userGroup := public.Group("/users")
+			{
+				userGroup.POST("/register", userHdl.Register)
+				userGroup.GET("", userHdl.GetUserByEmail)
+				userGroup.GET("/:id", userHdl.GetUserByID)
+			}
 
-	}
+			authGroup := public.Group("/auth")
+			{
+				authGroup.POST("/login", authHdl.Login)
+				authGroup.POST("/refresh", authHdl.RefreshToken)
+			}
+		}
 
-	authProtectedGroup := api.Group("/auth")
-	authProtectedGroup.Use(authMiddleware)
-	{
-		authProtectedGroup.POST("/logout", authHandler.Logout)
+		protected := v1.Group("/")
+		protected.Use(authMiddleware)
+		{
+
+			userGroup := protected.Group("/users")
+			{
+				userGroup.PUT("/:id", userHdl.UpdateUser)
+				userGroup.DELETE("/:id", userHdl.DeleteUser)
+			}
+
+			profileGroup := protected.Group("/profile")
+			{
+				profileGroup.GET("", userHdl.GetUserByID)
+				profileGroup.PUT("", userHdl.UpdateUser)
+			}
+		}
 	}
 
 	return r

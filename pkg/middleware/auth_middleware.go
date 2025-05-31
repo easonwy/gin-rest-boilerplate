@@ -8,9 +8,9 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/go-redis/redis/v7"
 	"github.com/golang-jwt/jwt/v5"
-	"github.com/tapas/go-user-service/internal/auth/repository"
-	"github.com/tapas/go-user-service/internal/config"
-	"github.com/tapas/go-user-service/pkg/response"
+	"github.com/yi-tech/go-user-service/internal/auth/repository"
+	"github.com/yi-tech/go-user-service/internal/config"
+	"github.com/yi-tech/go-user-service/pkg/response"
 )
 
 // AuthMiddleware creates a Gin middleware for JWT authentication.

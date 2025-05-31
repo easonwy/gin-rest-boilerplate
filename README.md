@@ -62,9 +62,9 @@
 *   编写部署文档
 *   持续集成/持续部署 (CI/CD) 配置 (可选)
 
-## 后续改进方向
+## 后续优化： 项目优化
 
-*   集成 Protobuf
+*   集成 Protobuf， 并实现 gRPC 服务，提供更高效的接口调用。 代码结构可以参考： https://github.com/baiyuze/go-development-template 里关于 gRPC 的实现。
 *   集成其他微服务组件 (如服务发现、熔断等)
 *   更完善的错误处理和日志记录
 *   性能调优
