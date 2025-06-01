@@ -1,0 +1,64 @@
+syntax = "proto3";
+
+package auth;
+
+option go_package = "github.com/yi-tech/go-user-service/api/proto/auth";
+
+import "google/protobuf/empty.proto";
+import "api/proto/user/user.proto";
+
+// AuthService provides authentication operations
+service AuthService {
+  // Login authenticates a user and returns tokens
+  rpc Login(LoginRequest) returns (TokenResponse);
+  
+  // RefreshToken refreshes an access token using a refresh token
+  rpc RefreshToken(RefreshTokenRequest) returns (TokenResponse);
+  
+  // Logout invalidates a refresh token
+  rpc Logout(LogoutRequest) returns (google.protobuf.Empty);
+  
+  // ValidateToken validates an access token
+  rpc ValidateToken(ValidateTokenRequest) returns (ValidateTokenResponse);
+  
+  // GetUserFromToken retrieves a user from an access token
+  rpc GetUserFromToken(GetUserFromTokenRequest) returns (user.User);
+}
+
+// LoginRequest is the request for user login
+message LoginRequest {
+  string email = 1;
+  string password = 2;
+}
+
+// RefreshTokenRequest is the request to refresh an access token
+message RefreshTokenRequest {
+  string refresh_token = 1;
+}
+
+// LogoutRequest is the request to logout
+message LogoutRequest {
+  string refresh_token = 1;
+}
+
+// TokenResponse is the response containing tokens
+message TokenResponse {
+  string access_token = 1;
+  string refresh_token = 2;
+}
+
+// ValidateTokenRequest is the request to validate a token
+message ValidateTokenRequest {
+  string access_token = 1;
+}
+
+// ValidateTokenResponse is the response for token validation
+message ValidateTokenResponse {
+  bool valid = 1;
+  string user_id = 2;
+}
+
+// GetUserFromTokenRequest is the request to get a user from a token
+message GetUserFromTokenRequest {
+  string access_token = 1;
+}

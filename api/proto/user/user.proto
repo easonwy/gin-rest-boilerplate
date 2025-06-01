@@ -1,0 +1,76 @@
+syntax = "proto3";
+
+package user;
+
+option go_package = "github.com/yi-tech/go-user-service/api/proto/user";
+
+import "google/protobuf/timestamp.proto";
+import "google/protobuf/empty.proto";
+
+// UserService provides user management operations
+service UserService {
+  // Register creates a new user
+  rpc Register(RegisterRequest) returns (User);
+  
+  // GetUserByID retrieves a user by ID
+  rpc GetUserByID(GetUserByIDRequest) returns (User);
+  
+  // GetUserByEmail retrieves a user by email
+  rpc GetUserByEmail(GetUserByEmailRequest) returns (User);
+  
+  // UpdateUser updates a user's details
+  rpc UpdateUser(UpdateUserRequest) returns (User);
+  
+  // UpdatePassword updates a user's password
+  rpc UpdatePassword(UpdatePasswordRequest) returns (google.protobuf.Empty);
+  
+  // DeleteUser deletes a user
+  rpc DeleteUser(DeleteUserRequest) returns (google.protobuf.Empty);
+}
+
+// User represents a user in the system
+message User {
+  string id = 1;
+  string email = 2;
+  string first_name = 3;
+  string last_name = 4;
+  google.protobuf.Timestamp created_at = 5;
+  google.protobuf.Timestamp updated_at = 6;
+}
+
+// RegisterRequest is the request for user registration
+message RegisterRequest {
+  string email = 1;
+  string password = 2;
+  string first_name = 3;
+  string last_name = 4;
+}
+
+// GetUserByIDRequest is the request to get a user by ID
+message GetUserByIDRequest {
+  string id = 1;
+}
+
+// GetUserByEmailRequest is the request to get a user by email
+message GetUserByEmailRequest {
+  string email = 1;
+}
+
+// UpdateUserRequest is the request to update a user's details
+message UpdateUserRequest {
+  string id = 1;
+  string first_name = 2;
+  string last_name = 3;
+}
+
+// UpdatePasswordRequest is the request to update a user's password
+message UpdatePasswordRequest {
+  string id = 1;
+  string current_password = 2;
+  string new_password = 3;
+}
+
+// DeleteUserRequest is the request to delete a user
+message DeleteUserRequest {
+  string id = 1;
+}

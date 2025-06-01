@@ -24,6 +24,7 @@ require (
 
 require (
 	github.com/go-redis/redis/v7 v7.4.1
+	github.com/golang-jwt/jwt v3.2.2+incompatible
 	github.com/golang-jwt/jwt/v5 v5.2.2
 	github.com/google/uuid v1.6.0
 	github.com/google/wire v0.6.0

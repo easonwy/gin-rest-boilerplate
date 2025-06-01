@@ -5,7 +5,7 @@
 # Define variables
 SERVICE_NAME = go-user-service
 BUILD_DIR = ./bin
-CMD_DIR = ./cmd/app
+CMD_DIR = ./cmd/server
 
 # Build the service
 build: 
@@ -39,8 +39,8 @@ wire:
 # --- Protobuf Generation ---
 
 PROTO_DIR = ./api/proto
-PROTO_OUT = ./internal/grpc
-SWAGGER_OUT = ./docs/swagger
+PROTO_OUT = ./internal/transport/grpc
+SWAGGER_OUT = ./api/swagger
 
 # Install protoc and required plugins
 proto-install:
