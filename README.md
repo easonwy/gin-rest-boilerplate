@@ -440,11 +440,3 @@ make build run
 4. 在 `/internal/service` 中实现业务逻辑
 5. 在 `/internal/transport` 中实现 HTTP 和 gRPC 处理器
 6. 在 `/cmd/server/wire` 中更新依赖注入配置
-
-## 后续优化
-
-* 集成其他微服务组件 (如服务发现、熔断等)
-* 更完善的错误处理和日志记录
-* 性能调优
-* 添加单元测试和集成测试
-* 自动化部署流程

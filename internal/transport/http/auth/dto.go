@@ -1,4 +1,4 @@
-package dto
+package auth
 
 // LoginRequest defines the user login request structure
 type LoginRequest struct {

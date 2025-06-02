@@ -6,8 +6,8 @@ import (
 	"github.com/google/uuid"
 )
 
-// Service defines the interface for user business logic
-type Service interface {
+// UserService defines the interface for user business logic
+type UserService interface {
 	// Register creates a new user
 	Register(ctx context.Context, email, password, firstName, lastName string) (*User, error)
 	

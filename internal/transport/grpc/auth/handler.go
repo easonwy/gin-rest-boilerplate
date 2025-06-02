@@ -3,10 +3,9 @@ package auth
 import (
 	"context"
 	"fmt"
-	"strconv"
 
+	"github.com/google/uuid"
 	"github.com/yi-tech/go-user-service/internal/domain/auth"
-	"github.com/yi-tech/go-user-service/internal/domain/auth/dto"
 	"github.com/yi-tech/go-user-service/internal/domain/user"
 	pb "github.com/yi-tech/go-user-service/api/proto/auth"
 	userPb "github.com/yi-tech/go-user-service/api/proto/user"
@@ -41,12 +40,7 @@ func (h *Handler) Login(ctx context.Context, req *pb.LoginRequest) (*pb.TokenRes
 	}
 
 	// Authenticate user
-	loginReq := dto.LoginRequest{
-		Email:    req.Email,
-		Password: req.Password,
-	}
-
-	tokenPair, err := h.authService.Login(loginReq)
+	tokenPair, err := h.authService.Login(ctx, req.Email, req.Password)
 	if err != nil {
 		// Generic error handling for now
 		if err.Error() == "invalid credentials" {
@@ -70,7 +64,7 @@ func (h *Handler) RefreshToken(ctx context.Context, req *pb.RefreshTokenRequest)
 	}
 
 	// Refresh token
-	tokenPair, err := h.authService.RefreshToken(req.RefreshToken)
+	tokenPair, err := h.authService.RefreshToken(ctx, req.RefreshToken)
 	if err != nil {
 		// Generic error handling for now
 		if err.Error() == "invalid token" || err.Error() == "session not found" {
@@ -132,7 +126,7 @@ func (h *Handler) ValidateToken(ctx context.Context, req *pb.ValidateTokenReques
 
 	return &pb.ValidateTokenResponse{
 		Valid:  true,
-		UserId: fmt.Sprintf("%d", userID), // Convert uint to string
+		UserId: userID.String(), // Convert UUID to string
 	}, nil
 }
 
@@ -143,26 +137,24 @@ func (h *Handler) GetUserFromToken(ctx context.Context, req *pb.GetUserFromToken
 }
 
 // getUserIDFromContext extracts user ID from the context
-func (h *Handler) getUserIDFromContext(ctx context.Context) (uint, error) {
-	// In a real implementation, this would extract the user ID from the context
-	// For now, we'll use a placeholder implementation
+func (h *Handler) getUserIDFromContext(ctx context.Context) (uuid.UUID, error) {
 	md, ok := metadata.FromIncomingContext(ctx)
 	if !ok {
-		return 0, fmt.Errorf("no metadata in context")
+		return uuid.Nil, fmt.Errorf("no metadata in context")
 	}
 
 	userIDs := md.Get("user-id")
 	if len(userIDs) == 0 {
-		return 0, fmt.Errorf("no user ID in metadata")
+		return uuid.Nil, fmt.Errorf("no user ID in metadata")
 	}
 
-	// Convert string ID to uint
-	id, err := strconv.ParseUint(userIDs[0], 10, 64)
+	// Parse string ID to uuid.UUID
+	userID, err := uuid.Parse(userIDs[0])
 	if err != nil {
-		return 0, fmt.Errorf("invalid user ID format: %w", err)
+		return uuid.Nil, fmt.Errorf("invalid user ID format: %w", err)
 	}
 
-	return uint(id), nil
+	return userID, nil
 }
 
 // toProtoUser converts a domain user model to a protobuf user message

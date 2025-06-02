@@ -4,15 +4,17 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/google/uuid"
 	"golang.org/x/crypto/bcrypt"
 )
 
 // User represents a user in the system.
 type User struct {
-	ID        uint      `gorm:"primaryKey" json:"id"`
-	Username  string    `gorm:"uniqueIndex;not null" json:"username" binding:"required"`
-	Password  string    `gorm:"not null" json:"-" binding:"required"` // Store hashed password, exclude from JSON output
-	Email     string    `gorm:"uniqueIndex;not null" json:"email" binding:"required,email"`
+	ID        uuid.UUID `gorm:"type:uuid;primaryKey" json:"id"`
+	FirstName string    `json:"first_name,omitempty"`
+	LastName  string    `json:"last_name,omitempty"`
+	Password  string    `gorm:"not null" json:"-"` // Store hashed password, exclude from JSON output
+	Email     string    `gorm:"uniqueIndex;not null" json:"email"`
 	CreatedAt time.Time `gorm:"autoCreateTime" json:"created_at"`
 	UpdatedAt time.Time `gorm:"autoUpdateTime" json:"updated_at"`
 }

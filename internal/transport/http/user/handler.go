@@ -3,53 +3,28 @@ package user
 import (
 	"fmt"
 	"net/http"
-	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
-	"github.com/yi-tech/go-user-service/internal/domain/user"
-	userService "github.com/yi-tech/go-user-service/internal/service/user"
+	domainUser "github.com/yi-tech/go-user-service/internal/domain/user"
+	serviceUser "github.com/yi-tech/go-user-service/internal/service/user"
 	"go.uber.org/zap"
 )
 
-// RegisterRequest represents the request body for user registration
-type RegisterRequest struct {
-	Email     string `json:"email" binding:"required,email"`
-	Password  string `json:"password" binding:"required,min=8"`
-	FirstName string `json:"first_name" binding:"required"`
-	LastName  string `json:"last_name" binding:"required"`
-}
-
-// UpdateRequest represents the request body for updating a user
+// UpdateRequest represents the request body for updating a user (kept inline for now)
 type UpdateRequest struct {
 	FirstName string `json:"first_name" binding:"required"`
 	LastName  string `json:"last_name" binding:"required"`
 }
 
-// PasswordUpdateRequest represents the request body for updating a password
-type PasswordUpdateRequest struct {
-	CurrentPassword string `json:"current_password" binding:"required"`
-	NewPassword     string `json:"new_password" binding:"required,min=8"`
-}
-
-// UserResponse represents the response body for user data
-type UserResponse struct {
-	ID        string `json:"id"`
-	Email     string `json:"email"`
-	FirstName string `json:"first_name"`
-	LastName  string `json:"last_name"`
-	CreatedAt string `json:"created_at"`
-	UpdatedAt string `json:"updated_at"`
-}
-
 // Handler handles HTTP requests for user operations
 type Handler struct {
-	userService userService.UserService
+	userService serviceUser.UserService
 	logger      *zap.Logger
 }
 
 // NewHandler creates a new user handler
-func NewHandler(userService userService.UserService, logger *zap.Logger) *Handler {
+func NewHandler(userService serviceUser.UserService, logger *zap.Logger) *Handler {
 	return &Handler{
 		userService: userService,
 		logger:      logger,
@@ -58,7 +33,7 @@ func NewHandler(userService userService.UserService, logger *zap.Logger) *Handle
 
 // Register handles user registration
 func (h *Handler) Register(c *gin.Context) {
-	var req RegisterRequest
+	var req UserRegisterRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		h.logger.Warn("Invalid register request", zap.Error(err))
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request data"})
@@ -67,6 +42,8 @@ func (h *Handler) Register(c *gin.Context) {
 
 	// Call domain service with direct parameters
 	newUser, err := h.userService.Register(c.Request.Context(), req.Email, req.Password, req.FirstName, req.LastName)
+	// If h.userService.Register returns *domainUser.User, direct pass is fine.
+	// If it returns a different concrete type that implements an interface, ensure compatibility.
 	if err != nil {
 		// Generic error handling for now
 		if err.Error() == "user already exists" {
@@ -117,7 +94,7 @@ func (h *Handler) GetUserByEmail(c *gin.Context) {
 		return
 	}
 
-	user, err := h.userService.GetByEmail(c.Request.Context(), email)
+	userDomainInstance, err := h.userService.GetByEmail(c.Request.Context(), email)
 	if err != nil {
 		// Generic error handling for now
 		if err.Error() == "user not found" {
@@ -129,7 +106,7 @@ func (h *Handler) GetUserByEmail(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, toUserResponse(user))
+	c.JSON(http.StatusOK, toUserResponse(userDomainInstance))
 }
 
 // UpdateUser handles updating a user's details
@@ -161,7 +138,7 @@ func (h *Handler) UpdateUser(c *gin.Context) {
 			return
 		}
 		h.logger.Error("Failed to update user", zap.Error(err), zap.String("user_id", idParam))
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update user"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Internal server error"})
 		return
 	}
 
@@ -181,7 +158,7 @@ func (h *Handler) UpdatePassword(c *gin.Context) {
 		return
 	}
 
-	var req PasswordUpdateRequest
+	var req UpdatePasswordRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		h.logger.Warn("Invalid password update request", zap.Error(err))
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request data"})
@@ -331,13 +308,13 @@ func (h *Handler) UpdateProfile(c *gin.Context) {
 }
 
 // toUserResponse converts a domain user model to a response object
-func toUserResponse(user *user.User) UserResponse {
+func toUserResponse(domainUser *domainUser.User) UserResponse {
 	return UserResponse{
-		ID:        fmt.Sprintf("%d", user.ID),
-		Email:     user.Email,
-		FirstName: user.Username, // Using Username as FirstName since our domain model doesn't have FirstName/LastName
-		LastName:  "", // No LastName in the domain model
-		CreatedAt: user.CreatedAt.Format(time.RFC3339),
-		UpdatedAt: user.UpdatedAt.Format(time.RFC3339),
+		ID:        domainUser.ID.String(),
+		Email:     domainUser.Email,
+		FirstName: domainUser.FirstName,
+		LastName:  domainUser.LastName,
+		CreatedAt: domainUser.CreatedAt, // UserResponse DTO expects time.Time
+		UpdatedAt: domainUser.UpdatedAt, // UserResponse DTO expects time.Time
 	}
 }

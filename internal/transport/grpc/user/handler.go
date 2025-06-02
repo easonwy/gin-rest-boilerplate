@@ -2,7 +2,6 @@ package user
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/google/uuid"
 	"github.com/yi-tech/go-user-service/internal/domain/user"
@@ -173,10 +172,10 @@ func (h *Handler) DeleteUser(ctx context.Context, req *pb.DeleteUserRequest) (*e
 // toProtoUser converts a domain user model to a protobuf user message
 func toProtoUser(user *user.User) *pb.User {
 	return &pb.User{
-		Id:        fmt.Sprintf("%d", user.ID),
+		Id:        user.ID.String(),
 		Email:     user.Email,
-		FirstName: user.Username, // Using username as first name
-		LastName:  "",            // No last name in the domain model
+		FirstName: user.FirstName,
+		LastName:  user.LastName,
 		CreatedAt: timestamppb.New(user.CreatedAt),
 		UpdatedAt: timestamppb.New(user.UpdatedAt),
 	}

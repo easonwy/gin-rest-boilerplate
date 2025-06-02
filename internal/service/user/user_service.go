@@ -6,8 +6,8 @@ import (
 	"fmt"
 
 	"github.com/google/uuid"
-	domain "github.com/yi-tech/go-user-service/internal/domain/user"
-	repo "github.com/yi-tech/go-user-service/internal/repository/user"
+	domainUser "github.com/yi-tech/go-user-service/internal/domain/user"
+	repoUser "github.com/yi-tech/go-user-service/internal/repository/user"
 )
 
 var (
@@ -17,16 +17,16 @@ var (
 // UserService defines the interface for user-related business logic.
 type UserService interface {
 	// Register creates a new user
-	Register(ctx context.Context, email, password, firstName, lastName string) (*domain.User, error)
+	Register(ctx context.Context, email, password, firstName, lastName string) (*domainUser.User, error)
 	
 	// GetByID retrieves a user by ID
-	GetByID(ctx context.Context, id uuid.UUID) (*domain.User, error)
+	GetByID(ctx context.Context, id uuid.UUID) (*domainUser.User, error)
 	
 	// GetByEmail retrieves a user by email
-	GetByEmail(ctx context.Context, email string) (*domain.User, error)
+	GetByEmail(ctx context.Context, email string) (*domainUser.User, error)
 	
 	// UpdateUser updates user details
-	UpdateUser(ctx context.Context, id uuid.UUID, firstName, lastName string) (*domain.User, error)
+	UpdateUser(ctx context.Context, id uuid.UUID, firstName, lastName string) (*domainUser.User, error)
 	
 	// UpdatePassword changes a user's password
 	UpdatePassword(ctx context.Context, id uuid.UUID, currentPassword, newPassword string) error
@@ -36,15 +36,15 @@ type UserService interface {
 }
 
 type userService struct {
-	userRepo repo.UserRepository
+	userRepo repoUser.UserRepository
 }
 
 // NewUserService creates a new instance of UserService.
-func NewUserService(userRepo repo.UserRepository) UserService {
+func NewUserService(userRepo repoUser.UserRepository) UserService {
 	return &userService{userRepo: userRepo}
 }
 
-func (s *userService) Register(ctx context.Context, email, password, firstName, lastName string) (*domain.User, error) {
+func (s *userService) Register(ctx context.Context, email, password, firstName, lastName string) (*domainUser.User, error) {
 	// Check if user already exists by email
 	existingUserByEmail, err := s.userRepo.GetUserByEmail(email)
 	if err != nil {
@@ -55,7 +55,7 @@ func (s *userService) Register(ctx context.Context, email, password, firstName, 
 	}
 
 	// Create new user model
-	user := &domain.User{
+	user := &domainUser.User{
 		Email:    email,
 		Password: password, // Password will be hashed in the model method
 	}
@@ -73,15 +73,15 @@ func (s *userService) Register(ctx context.Context, email, password, firstName, 
 	return user, nil
 }
 
-func (s *userService) GetByEmail(ctx context.Context, email string) (*domain.User, error) {
+func (s *userService) GetByEmail(ctx context.Context, email string) (*domainUser.User, error) {
 	return s.userRepo.GetUserByEmail(email)
 }
 
-func (s *userService) GetByID(ctx context.Context, id uuid.UUID) (*domain.User, error) {
+func (s *userService) GetByID(ctx context.Context, id uuid.UUID) (*domainUser.User, error) {
 	return s.userRepo.GetUserByID(uint(id.ID()))
 }
 
-func (s *userService) UpdateUser(ctx context.Context, id uuid.UUID, firstName, lastName string) (*domain.User, error) {
+func (s *userService) UpdateUser(ctx context.Context, id uuid.UUID, firstName, lastName string) (*domainUser.User, error) {
 	// Get existing user
 	existingUser, err := s.userRepo.GetUserByID(uint(id.ID()))
 	if err != nil {

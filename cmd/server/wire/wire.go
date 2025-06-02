@@ -12,15 +12,15 @@ import (
 
 	"github.com/yi-tech/go-user-service/internal/config"
 	"github.com/yi-tech/go-user-service/internal/provider"
-	auth "github.com/yi-tech/go-user-service/internal/domain/auth"
-	auth2 "github.com/yi-tech/go-user-service/internal/repository/auth"
-	user2 "github.com/yi-tech/go-user-service/internal/repository/user"
-	auth3 "github.com/yi-tech/go-user-service/internal/service/auth"
-	user3 "github.com/yi-tech/go-user-service/internal/service/user"
-	auth5 "github.com/yi-tech/go-user-service/internal/transport/grpc/auth"
-	user5 "github.com/yi-tech/go-user-service/internal/transport/grpc/user"
-	auth4 "github.com/yi-tech/go-user-service/internal/transport/http/auth"
-	user4 "github.com/yi-tech/go-user-service/internal/transport/http/user"
+	domainAuth "github.com/yi-tech/go-user-service/internal/domain/auth"
+	repoAuth "github.com/yi-tech/go-user-service/internal/repository/auth"
+	repoUser "github.com/yi-tech/go-user-service/internal/repository/user"
+	serviceAuth "github.com/yi-tech/go-user-service/internal/service/auth"
+	serviceUser "github.com/yi-tech/go-user-service/internal/service/user"
+	grpcAuth "github.com/yi-tech/go-user-service/internal/transport/grpc/auth"
+	grpcUser "github.com/yi-tech/go-user-service/internal/transport/grpc/user"
+	httpAuth "github.com/yi-tech/go-user-service/internal/transport/http/auth"
+	httpUser "github.com/yi-tech/go-user-service/internal/transport/http/user"
 	grpc "github.com/yi-tech/go-user-service/internal/transport/grpc"
 	http "github.com/yi-tech/go-user-service/internal/transport/http"
 	"github.com/yi-tech/go-user-service/internal/middleware"
@@ -35,7 +35,7 @@ func ProvideGRPCConfig(cfg *config.Config) *grpc.Config {
 }
 
 // ProvideGRPCServer creates a new gRPC server
-func ProvideGRPCServer(userService user3.UserService, authService auth.AuthService, logger *zap.Logger, cfg *grpc.Config) *grpc.Server {
+func ProvideGRPCServer(userService serviceUser.UserService, authService domainAuth.AuthService, logger *zap.Logger, cfg *grpc.Config) *grpc.Server {
 	return grpc.NewServer(userService, authService, logger, cfg)
 }
 
@@ -57,6 +57,7 @@ func InitializeApp() (*App, error) {
 		provider.ProvideRedisClient,
 		ProvideUserRepository,
 		ProvideAuthRepository,
+
 		ProvideUserService,
 		ProvideAuthService,
 		ProvideUserHttpHandler,
@@ -72,48 +73,48 @@ func InitializeApp() (*App, error) {
 }
 
 // Provider functions for repositories
-func ProvideUserRepository(db *gorm.DB) user2.UserRepository {
-	return user2.NewUserRepository(db)
+func ProvideUserRepository(db *gorm.DB) repoUser.UserRepository {
+	return repoUser.NewUserRepository(db)
 }
 
-func ProvideAuthRepository(redis *redis.Client) auth2.AuthRepository {
-	return auth2.NewAuthRepository(redis)
+func ProvideAuthRepository(redis *redis.Client) domainAuth.AuthRepository {
+	return repoAuth.NewAuthRepository(redis)
 }
 
 // Provider functions for services
-func ProvideUserService(repo user2.UserRepository) user3.UserService {
-	return user3.NewUserService(repo)
+func ProvideUserService(repo repoUser.UserRepository) serviceUser.UserService {
+	return serviceUser.NewUserService(repo)
 }
 
-func ProvideAuthService(userService user3.UserService, authRepo auth2.AuthRepository, cfg *config.Config) auth.AuthService {
-	return auth3.NewService(userService, authRepo, cfg)
+func ProvideAuthService(userService serviceUser.UserService, authRepo domainAuth.AuthRepository, cfg *config.Config) domainAuth.AuthService {
+	return serviceAuth.NewService(userService, authRepo, cfg)
 }
 
 // Provider functions for HTTP handlers
-func ProvideUserHttpHandler(userService user3.UserService, logger *zap.Logger) *user4.Handler {
-	return user4.NewHandler(userService, logger)
+func ProvideUserHttpHandler(userService serviceUser.UserService, logger *zap.Logger) *httpUser.Handler {
+	return httpUser.NewHandler(userService, logger)
 }
 
-func ProvideAuthHttpHandler(authService auth.AuthService, logger *zap.Logger) *auth4.Handler {
-	return auth4.NewHandler(authService, logger)
+func ProvideAuthHttpHandler(authService domainAuth.AuthService, logger *zap.Logger) *httpAuth.Handler {
+	return httpAuth.NewHandler(authService, logger)
 }
 
 // Provider functions for gRPC handlers
-func ProvideUserGrpcHandler(userService user3.UserService, logger *zap.Logger) *user5.Handler {
-	return user5.NewHandler(userService, logger)
+func ProvideUserGrpcHandler(userService serviceUser.UserService, logger *zap.Logger) *grpcUser.Handler {
+	return grpcUser.NewHandler(userService, logger)
 }
 
-func ProvideAuthGrpcHandler(authService auth.AuthService, logger *zap.Logger) *auth5.Handler {
-	return auth5.NewHandler(authService, logger)
+func ProvideAuthGrpcHandler(authService domainAuth.AuthService, logger *zap.Logger) *grpcAuth.Handler {
+	return grpcAuth.NewHandler(authService, logger)
 }
 
 // Provider function for middleware
-func ProvideAuthMiddleware(authService auth.AuthService, logger *zap.Logger) gin.HandlerFunc {
+func ProvideAuthMiddleware(authService domainAuth.AuthService, logger *zap.Logger) gin.HandlerFunc {
 	return middleware.AuthMiddleware(authService, logger)
 }
 
 // Provider function for router
-func ProvideRouter(userHandler *user4.Handler, authHandler *auth4.Handler, authService auth.AuthService, logger *zap.Logger) *gin.Engine {
+func ProvideRouter(userHandler *httpUser.Handler, authHandler *httpAuth.Handler, authService domainAuth.AuthService, logger *zap.Logger) *gin.Engine {
 	return http.NewRouter(userHandler, authHandler, authService, logger)
 }
 

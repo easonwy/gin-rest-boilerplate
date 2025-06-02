@@ -96,7 +96,7 @@ func ProvideUserRepository(db *gorm.DB) user2.UserRepository {
 	return user2.NewUserRepository(db)
 }
 
-func ProvideAuthRepository(redis2 *redis.Client) auth2.AuthRepository {
+func ProvideAuthRepository(redis2 *redis.Client) auth.AuthRepository {
 	return auth2.NewAuthRepository(redis2)
 }
 
@@ -105,7 +105,7 @@ func ProvideUserService(repo user2.UserRepository) user.UserService {
 	return user.NewUserService(repo)
 }
 
-func ProvideAuthService(userService user.UserService, authRepo auth2.AuthRepository, cfg *config.Config) auth.AuthService {
+func ProvideAuthService(userService user.UserService, authRepo auth.AuthRepository, cfg *config.Config) auth.AuthService {
 	return auth3.NewService(userService, authRepo, cfg)
 }
 

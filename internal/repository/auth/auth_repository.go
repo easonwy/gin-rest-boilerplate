@@ -6,34 +6,23 @@ import (
 	"time"
 
 	"github.com/go-redis/redis/v8"
+	"github.com/google/uuid"
 	"github.com/yi-tech/go-user-service/internal/config"
+	domainAuth "github.com/yi-tech/go-user-service/internal/domain/auth"
 )
 
-// AuthRepository defines the interface for authentication data operations.
-type AuthRepository interface {
-	// UserID -> RefreshToken mapping
-	SetUserRefreshToken(ctx context.Context, userID uint, token string, expiration time.Duration) error
-	GetUserRefreshToken(ctx context.Context, userID uint) (string, error)
-	DeleteUserRefreshToken(ctx context.Context, userID uint) error
-
-	// RefreshToken -> UserID mapping
-	SetRefreshTokenUserID(ctx context.Context, token string, userID uint, expiration time.Duration) error
-	GetUserIDByRefreshToken(ctx context.Context, token string) (uint, error)
-	DeleteRefreshTokenUserID(ctx context.Context, token string) error
-}
-
-type authRepository struct {
+// authRepository struct implements the domainAuth.AuthRepository interface
+type AuthRepositoryImpl struct {
 	redisClient *redis.Client
 }
 
 // NewAuthRepository creates a new instance of AuthRepository.
-func NewAuthRepository(redisClient *redis.Client) AuthRepository {
-	return &authRepository{redisClient: redisClient}
+func NewAuthRepository(redisClient *redis.Client) domainAuth.AuthRepository { // Return type changed to domain interface
+	return &AuthRepositoryImpl{redisClient: redisClient}
 }
 
-func (r *authRepository) SetUserRefreshToken(ctx context.Context, userID uint, token string, expiration time.Duration) error {
-	// Store refresh token in Redis with user ID as value
-	key := fmt.Sprintf(config.RedisKeyPrefix+"refresh_token:%d", userID)
+func (r *AuthRepositoryImpl) SetUserRefreshToken(ctx context.Context, userID uuid.UUID, token string, expiration time.Duration) error { // userID type changed
+	key := fmt.Sprintf(config.RedisKeyPrefix+"refresh_token:%s", userID.String()) // key formatting changed
 	err := r.redisClient.Set(ctx, key, token, expiration).Err()
 	if err != nil {
 		return fmt.Errorf("failed to set refresh token in redis: %w", err)
@@ -41,22 +30,20 @@ func (r *authRepository) SetUserRefreshToken(ctx context.Context, userID uint, t
 	return nil
 }
 
-func (r *authRepository) GetUserRefreshToken(ctx context.Context, userID uint) (string, error) {
-	// Get refresh token from Redis by user ID
-	key := fmt.Sprintf(config.RedisKeyPrefix+"refresh_token:%d", userID)
+func (r *AuthRepositoryImpl) GetUserRefreshToken(ctx context.Context, userID uuid.UUID) (string, error) { // userID type changed
+	key := fmt.Sprintf(config.RedisKeyPrefix+"refresh_token:%s", userID.String()) // key formatting changed
 	token, err := r.redisClient.Get(ctx, key).Result()
 	if err != nil {
 		if err == redis.Nil {
-			return "", nil // Token not found
+			return "", nil // Token not found, service layer should handle this
 		}
 		return "", fmt.Errorf("failed to get refresh token from redis: %w", err)
 	}
 	return token, nil
 }
 
-func (r *authRepository) DeleteUserRefreshToken(ctx context.Context, userID uint) error {
-	// Delete refresh token from Redis by user ID
-	key := fmt.Sprintf(config.RedisKeyPrefix+"refresh_token:%d", userID)
+func (r *AuthRepositoryImpl) DeleteUserRefreshToken(ctx context.Context, userID uuid.UUID) error { // userID type changed
+	key := fmt.Sprintf(config.RedisKeyPrefix+"refresh_token:%s", userID.String()) // key formatting changed
 	err := r.redisClient.Del(ctx, key).Err()
 	if err != nil {
 		return fmt.Errorf("failed to delete refresh token from redis: %w", err)
@@ -64,36 +51,33 @@ func (r *authRepository) DeleteUserRefreshToken(ctx context.Context, userID uint
 	return nil
 }
 
-func (r *authRepository) SetRefreshTokenUserID(ctx context.Context, token string, userID uint, expiration time.Duration) error {
-	// Store user ID in Redis with refresh token as key
+func (r *AuthRepositoryImpl) SetRefreshTokenUserID(ctx context.Context, token string, userID uuid.UUID, expiration time.Duration) error { // userID type changed
 	key := fmt.Sprintf(config.RedisKeyPrefix+"user_id:%s", token)
-	err := r.redisClient.Set(ctx, key, userID, expiration).Err()
+	err := r.redisClient.Set(ctx, key, userID.String(), expiration).Err() // Store userID.String()
 	if err != nil {
 		return fmt.Errorf("failed to set user ID by refresh token in redis: %w", err)
 	}
 	return nil
 }
 
-func (r *authRepository) GetUserIDByRefreshToken(ctx context.Context, token string) (uint, error) {
-	// Get user ID from Redis by refresh token
+func (r *AuthRepositoryImpl) GetUserIDByRefreshToken(ctx context.Context, token string) (uuid.UUID, error) { // return type and userID type changed
 	key := fmt.Sprintf(config.RedisKeyPrefix+"user_id:%s", token)
 	userIDStr, err := r.redisClient.Get(ctx, key).Result()
 	if err != nil {
 		if err == redis.Nil {
-			return 0, nil // User ID not found
+			return uuid.Nil, nil // User ID not found, service layer should handle this
 		}
-		return 0, fmt.Errorf("failed to get user ID by refresh token from redis: %w", err)
+		return uuid.Nil, fmt.Errorf("failed to get user ID by refresh token from redis: %w", err)
 	}
-	var userID uint
-	_, err = fmt.Sscanf(userIDStr, "%d", &userID)
+	
+	parsedUserID, err := uuid.Parse(userIDStr) // Parse string to uuid.UUID
 	if err != nil {
-		return 0, fmt.Errorf("failed to parse user ID from redis: %w", err)
+		return uuid.Nil, fmt.Errorf("failed to parse user ID '%s' from redis: %w", userIDStr, err)
 	}
-	return userID, nil
+	return parsedUserID, nil
 }
 
-func (r *authRepository) DeleteRefreshTokenUserID(ctx context.Context, token string) error {
-	// Delete user ID from Redis by refresh token
+func (r *AuthRepositoryImpl) DeleteRefreshTokenUserID(ctx context.Context, token string) error {
 	key := fmt.Sprintf(config.RedisKeyPrefix+"user_id:%s", token)
 	err := r.redisClient.Del(ctx, key).Err()
 	if err != nil {
