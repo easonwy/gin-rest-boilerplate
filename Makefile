@@ -1,17 +1,33 @@
 # Makefile for go-user-service
 
-.PHONY: build test clean run wire proto proto-clean proto-gen proto-swagger
-
 # Define variables
 SERVICE_NAME = go-user-service
 BUILD_DIR = ./bin
 CMD_DIR = ./cmd/server
+VERSION ?= $(shell git describe --tags --always --dirty)
+BUILD_TIME ?= $(shell date -u '+%Y-%m-%d_%H:%M:%S')
 
-# Build the service
+# --- Build and Run ---
+
+# Build the service with version information
 build: 
-	@echo "Building $(SERVICE_NAME)..."
-	go build -o $(BUILD_DIR)/$(SERVICE_NAME) $(CMD_DIR)
+	@echo "Building $(SERVICE_NAME) version $(VERSION)..."
+	go build -ldflags "-X main.Version=$(VERSION) -X main.BuildTime=$(BUILD_TIME)" -o $(BUILD_DIR)/$(SERVICE_NAME) $(CMD_DIR)
 	@echo "Build complete."
+
+# Run the service
+run: build
+	@echo "Running $(SERVICE_NAME)..."
+	$(BUILD_DIR)/$(SERVICE_NAME)
+
+# Clean build artifacts
+clean:
+	@echo "Cleaning build artifacts..."
+	rm -rf $(BUILD_DIR)
+	rm -f coverage.out coverage.html
+	@echo "Clean complete."
+
+# --- Testing and Code Quality ---
 
 # Run tests
 test:
@@ -19,16 +35,38 @@ test:
 	go test ./...
 	@echo "Tests complete."
 
-# Clean build artifacts
-clean:
-	@echo "Cleaning build artifacts..."
-	rm -rf $(BUILD_DIR)
-	@echo "Clean complete."
+# Run tests with coverage
+test-coverage:
+	@echo "Running tests with coverage..."
+	go test -coverprofile=coverage.out ./...
+	go tool cover -html=coverage.out -o coverage.html
+	@echo "Coverage report generated at coverage.html"
 
-# Run the service
-run: build
-	@echo "Running $(SERVICE_NAME)..."
-	$(BUILD_DIR)/$(SERVICE_NAME)
+# Run linter
+lint:
+	@echo "Linting code..."
+	golangci-lint run ./...
+
+# Format code
+fmt:
+	@echo "Formatting code..."
+	go fmt ./...
+
+# Run go vet
+vet:
+	@echo "Vetting code..."
+	go vet ./...
+
+# Generate mocks for testing
+mocks:
+	@echo "Generating mocks..."
+	mockgen -source=internal/domain/user/repository.go -destination=internal/mocks/user_repository_mock.go -package=mocks
+	mockgen -source=internal/domain/auth/repository.go -destination=internal/mocks/auth_repository_mock.go -package=mocks
+	mockgen -source=internal/domain/user/service.go -destination=internal/mocks/user_service_mock.go -package=mocks
+	mockgen -source=internal/domain/auth/service.go -destination=internal/mocks/auth_service_mock.go -package=mocks
+	@echo "Mock generation complete."
+
+# --- Dependency Injection ---
 
 # Regenerate wire dependency injection code
 wire:
@@ -62,13 +100,23 @@ proto-gen: proto-clean
 proto-swagger: proto-gen
 	@echo "Swagger documentation generated at $(SWAGGER_OUT)/user_service.swagger.json"
 
+# --- Docker Support ---
+
+# Build Docker image
+docker-build:
+	@echo "Building Docker image..."
+	docker build -t $(SERVICE_NAME):$(VERSION) .
+
+# Run Docker container
+docker-run:
+	@echo "Running Docker container..."
+	docker run -p 8080:8080 -p 8081:8081 $(SERVICE_NAME):$(VERSION)
+
 # --- Database Migration --- 
 
 MIGRATE_CLI = migrate
 MIGRATE_DIR = ./migrations
 DB_URL = $(DATABASE_URL) # Use DATABASE_URL environment variable
-
-.PHONY: migrate-create migrate-up migrate-down
 
 migrate-create:
 	@echo "Creating migration file..."
@@ -81,3 +129,44 @@ migrate-up:
 migrate-down:
 	@echo "Running migrations down..."
 	$(MIGRATE_CLI) -database $(DB_URL) -path $(MIGRATE_DIR) down
+
+# --- Development Setup ---
+
+# Install development dependencies
+dev-deps:
+	@echo "Installing development dependencies..."
+	go install github.com/google/wire/cmd/wire@latest
+	go install github.com/golang/mock/mockgen@latest
+	go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
+	$(MAKE) proto-install
+	@echo "Development dependencies installed."
+
+# --- Help ---
+
+# Show help
+help:
+	@echo "Available targets:"
+	@echo "  build          - Build the service"
+	@echo "  test           - Run tests"
+	@echo "  test-coverage  - Run tests with coverage report"
+	@echo "  lint           - Run linter"
+	@echo "  fmt            - Format code"
+	@echo "  vet            - Run go vet"
+	@echo "  clean          - Clean build artifacts"
+	@echo "  run            - Build and run the service"
+	@echo "  wire           - Regenerate wire dependency injection code"
+	@echo "  proto-install  - Install protobuf tools"
+	@echo "  proto-gen      - Generate protobuf code"
+	@echo "  proto-swagger  - Generate swagger docs"
+	@echo "  docker-build   - Build Docker image"
+	@echo "  docker-run     - Run Docker container"
+	@echo "  mocks          - Generate mock implementations for testing"
+	@echo "  dev-deps       - Install development dependencies"
+	@echo "  migrate-create - Create a new migration file"
+	@echo "  migrate-up     - Run migrations up"
+	@echo "  migrate-down   - Run migrations down"
+	@echo "  help           - Show this help message"
+
+.PHONY: build test clean run wire proto-install proto-clean proto-gen proto-swagger \
+        lint fmt vet docker-build docker-run dev-deps test-coverage mocks help \
+        migrate-create migrate-up migrate-down

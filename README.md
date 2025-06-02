@@ -26,41 +26,8 @@
 *   **认证**: JWT
 *   **依赖注入**: Wire
 *   **配置管理**: Viper 或其他
-*   **日志**: Zap 或 Logrus
+*   **日志**: Zap
 *   **单元测试**: Go testing
-*   **项目结构**: 参考 `gin-pathway` <mcurl name="gin-pathway" url="https://github.com/vespeng/gin-pathway"></mcurl>
-
-## 开发计划 (初步)
-
-**迭代 1: 项目骨架搭建与用户管理基础功能**
-
-*   搭建项目基本目录结构 (参考 `gin-pathway`)
-*   集成 Gin 框架
-*   配置多环境支持
-*   实现用户注册功能
-*   编写用户注册的单元测试
-
-**迭代 2: 系统鉴权功能**
-
-*   集成 Redis
-*   实现基于 Redis + JWT 的登录认证
-*   实现 Refresh Token 机制
-*   设计统一接口返回结构
-*   编写认证功能的单元测试
-
-**迭代 3: 用户管理进阶功能与优化**
-
-*   实现用户信息查询、更新、删除功能
-*   完善统一接口返回结构
-*   集成依赖注入 (Wire)
-*   编写用户管理进阶功能的单元测试
-*   代码重构与优化
-
-**迭代 4: 文档与部署**
-
-*   编写 API 文档
-*   编写部署文档
-*   持续集成/持续部署 (CI/CD) 配置 (可选)
 
 ## 项目结构
 
@@ -179,6 +146,274 @@
 ```
 
 生成的代码将位于相应的 proto 目录中，Swagger 文档将生成在 `/api/swagger` 目录中。
+
+#### 验证 gRPC API
+
+本项目提供了多种方式验证 gRPC API：
+
+1. **使用 gRPC-Gateway REST 接口**
+
+   启动服务后，可以通过 HTTP 请求访问 gRPC-Gateway 提供的 REST 接口：
+
+   ```bash
+   # 例如，获取用户信息
+   curl -X GET "http://localhost:8081/api/v1/users/1" -H "Authorization: Bearer YOUR_TOKEN"
+   ```
+
+   gRPC-Gateway 监听在配置的 `grpc.port + 1` 端口上（默认为 8081）。
+
+#### 使用 Makefile
+
+本项目提供了全面的 Makefile 来简化开发、测试和部署流程。使用 `make help` 查看所有可用命令。
+
+##### 构建与运行
+
+```bash
+# 构建服务（包含版本信息）
+make build
+
+# 构建并运行服务
+make run
+
+# 清理构建产物
+make clean
+```
+
+##### 测试与代码质量
+
+```bash
+# 运行所有测试
+make test
+
+# 生成测试覆盖率报告
+make test-coverage
+
+# 运行代码格式化
+make fmt
+
+# 运行代码静态分析
+make vet
+
+# 运行代码质量检查
+make lint
+
+# 生成测试用 Mock 对象
+make mocks
+```
+
+##### 依赖注入
+
+```bash
+# 重新生成 Wire 依赖注入代码
+make wire
+```
+
+##### Protobuf 与 API 文档
+
+```bash
+# 安装 Protobuf 相关工具
+make proto-install
+
+# 生成 Protobuf 代码
+make proto-gen
+
+# 生成 Swagger 文档
+make proto-swagger
+```
+
+##### Docker 支持
+
+```bash
+# 构建 Docker 镜像
+make docker-build
+
+# 运行 Docker 容器
+make docker-run
+```
+
+##### 数据库迁移
+
+```bash
+# 创建新的迁移文件
+make migrate-create name=migration_name
+
+# 执行数据库迁移
+make migrate-up
+
+# 回滚数据库迁移
+make migrate-down
+```
+
+##### 开发环境设置
+
+```bash
+# 安装所有开发依赖
+make dev-deps
+```
+
+2. **使用 gRPCurl 工具**
+
+   安装 gRPCurl 工具：
+
+   ```bash
+   go install github.com/fullstorydev/grpcurl/cmd/grpcurl@latest
+   ```
+
+   列出所有可用服务：
+
+   ```bash
+   grpcurl -plaintext localhost:8080 list
+   ```
+
+   输出示例：
+   ```
+   user.v1.UserService
+   auth.v1.AuthService
+   grpc.reflection.v1alpha.ServerReflection
+   ```
+
+   查看服务方法：
+
+   ```bash
+   grpcurl -plaintext localhost:8080 list user.v1.UserService
+   ```
+
+   输出示例：
+   ```
+   user.v1.UserService.CreateUser
+   user.v1.UserService.GetUser
+   user.v1.UserService.UpdateUser
+   user.v1.UserService.DeleteUser
+   user.v1.UserService.GetUserByEmail
+   ```
+
+   调用方法示例及响应：
+
+   **用户注册示例**：
+   ```bash
+   grpcurl -plaintext -d '{
+     "email": "test@example.com",
+     "password": "Password123!",
+     "full_name": "Test User"
+   }' localhost:8080 user.v1.UserService/CreateUser
+   ```
+
+   成功响应：
+   ```json
+   {
+     "user": {
+       "id": "f47ac10b-58cc-4372-a567-0e02b2c3d479",
+       "email": "test@example.com",
+       "fullName": "Test User",
+       "createdAt": "2025-06-02T00:24:15Z",
+       "updatedAt": "2025-06-02T00:24:15Z"
+     }
+   }
+   ```
+
+   **用户登录示例**：
+   ```bash
+   grpcurl -plaintext -d '{
+     "email": "test@example.com",
+     "password": "Password123!"
+   }' localhost:8080 auth.v1.AuthService/Login
+   ```
+
+   成功响应：
+   ```json
+   {
+     "tokens": {
+       "accessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+       "refreshToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+     },
+     "user": {
+       "id": "f47ac10b-58cc-4372-a567-0e02b2c3d479",
+       "email": "test@example.com",
+       "fullName": "Test User"
+     }
+   }
+   ```
+
+   **获取用户信息示例**：
+   ```bash
+   grpcurl -plaintext -d '{"id": "f47ac10b-58cc-4372-a567-0e02b2c3d479"}' \
+     -H 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...' \
+     localhost:8080 user.v1.UserService/GetUser
+   ```
+
+   成功响应：
+   ```json
+   {
+     "user": {
+       "id": "f47ac10b-58cc-4372-a567-0e02b2c3d479",
+       "email": "test@example.com",
+       "fullName": "Test User",
+       "createdAt": "2025-06-02T00:24:15Z",
+       "updatedAt": "2025-06-02T00:24:15Z"
+     }
+   }
+   ```
+
+   **更新用户信息示例**：
+   ```bash
+   grpcurl -plaintext -d '{
+     "id": "f47ac10b-58cc-4372-a567-0e02b2c3d479",
+     "fullName": "Updated User Name"
+   }' \
+     -H 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...' \
+     localhost:8080 user.v1.UserService/UpdateUser
+   ```
+
+   成功响应：
+   ```json
+   {
+     "user": {
+       "id": "f47ac10b-58cc-4372-a567-0e02b2c3d479",
+       "email": "test@example.com",
+       "fullName": "Updated User Name",
+       "createdAt": "2025-06-02T00:24:15Z",
+       "updatedAt": "2025-06-02T00:25:30Z"
+     }
+   }
+   ```
+
+   **刷新令牌示例**：
+   ```bash
+   grpcurl -plaintext -d '{
+     "refreshToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+   }' localhost:8080 auth.v1.AuthService/RefreshToken
+   ```
+
+   成功响应：
+   ```json
+   {
+     "tokens": {
+       "accessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+       "refreshToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+     }
+   }
+   ```
+
+3. **使用 Swagger UI**
+
+   可以通过 Swagger UI 浏览和测试 API：
+
+   ```bash
+   # 安装 swagger-ui 工具
+   npm install -g swagger-ui-cli
+   
+   # 启动 Swagger UI
+   swagger-ui-cli serve ./api/swagger/user_service.swagger.json
+   ```
+
+   然后在浏览器中访问 http://localhost:8080 查看和测试 API。
+
+4. **使用 Postman**
+
+   可以导入 Swagger 文档到 Postman：
+   - 打开 Postman，点击 "Import" > "Import File"  
+   - 选择 `./api/swagger/user_service.swagger.json`
+   - Postman 将自动创建所有 API 端点的请求集合
 
 #### 构建和运行
 
