@@ -3,9 +3,10 @@ package http
 import (
 	"github.com/gin-gonic/gin"
 	"github.com/yi-tech/go-user-service/internal/domain/auth"
-	authHandler "github.com/yi-tech/go-user-service/internal/transport/http/auth"
-	userHandler "github.com/yi-tech/go-user-service/internal/transport/http/user"
 	"github.com/yi-tech/go-user-service/internal/middleware"
+	authHandler "github.com/yi-tech/go-user-service/internal/transport/http/auth"
+	"github.com/yi-tech/go-user-service/internal/transport/http/response"
+	userHandler "github.com/yi-tech/go-user-service/internal/transport/http/user"
 	"go.uber.org/zap"
 )
 
@@ -19,9 +20,7 @@ func SetupRouter(
 ) {
 	// Health check
 	router.GET("/health", func(c *gin.Context) {
-		c.JSON(200, gin.H{
-			"status": "ok",
-		})
+		response.Success(c, gin.H{"status": "ok"})
 	})
 
 	// API v1 routes

@@ -40,6 +40,11 @@ func (s *Service) Login(ctx context.Context, email, password string) (*domainAut
 		return nil, fmt.Errorf("failed to get user by email: %w", err)
 	}
 
+	// Check if user exists
+	if user == nil {
+		return nil, errors.New("invalid credentials")
+	}
+
 	// Verify password
 	err = bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(password))
 	if err != nil {
