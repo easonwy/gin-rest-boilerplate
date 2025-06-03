@@ -114,27 +114,6 @@
    - Redis 会话管理
    - 令牌验证
 
-## 项目重组说明
-
-项目已经完成了结构重组，采用了更清晰的领域驱动设计和清洁架构。主要变化如下：
-
-1. **API 合约管理**
-   - 将 Protocol Buffers 定义移至 `/api/proto` 目录
-   - 按版本组织 API，添加 v1 版本目录
-   - Swagger 文档移至 `/api/swagger` 目录
-
-2. **应用入口点**
-   - 将应用入口点从 `/cmd/app` 移至 `/cmd/server`
-   - 依赖注入配置位于 `/cmd/server/wire`
-
-3. **传输层分离**
-   - 将 HTTP 和 gRPC 处理器移至 `/internal/transport/http` 和 `/internal/transport/grpc`
-   - 清晰区分不同协议的处理逻辑
-
-4. **领域模型分离**
-   - 将领域模型移至 `/internal/domain`
-   - 按功能模块组织领域模型
-
 ### 开发者指南
 
 #### 生成 Protocol Buffers 代码
