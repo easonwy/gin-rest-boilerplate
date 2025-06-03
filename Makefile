@@ -116,7 +116,12 @@ docker-run:
 
 MIGRATE_CLI = migrate
 MIGRATE_DIR = ./migrations
-DB_URL = $(DATABASE_URL) # Use DATABASE_URL environment variable
+# Use DATABASE_URL environment variable or default to PostgreSQL connection string
+# For migrate tool, the PostgreSQL driver should be specified as 'postgres'
+DB_URL = $(if $(DATABASE_URL),$(DATABASE_URL),postgres://ewu:123456@localhost:5432/user_auth_dev?sslmode=disable)
+
+# Version to force when fixing dirty migrations
+MIGRATE_VERSION = 0
 
 migrate-create:
 	@echo "Creating migration file..."
@@ -128,7 +133,15 @@ migrate-up:
 
 migrate-down:
 	@echo "Running migrations down..."
-	$(MIGRATE_CLI) -database $(DB_URL) -path $(MIGRATE_DIR) down
+	@if [ -z "$(DATABASE_URL)" ]; then \
+		echo "DATABASE_URL environment variable is not set. Using default connection string."; \
+		echo "If this fails, please set the DATABASE_URL environment variable with the correct connection string."; \
+	fi
+	$(MIGRATE_CLI) -database $(DB_URL) -path $(MIGRATE_DIR) down -all
+
+migrate-force:
+	@echo "Forcing migration version to $(MIGRATE_VERSION)..."
+	$(MIGRATE_CLI) -database $(DB_URL) -path $(MIGRATE_DIR) force $(MIGRATE_VERSION)
 
 # --- Development Setup ---
 
@@ -165,8 +178,9 @@ help:
 	@echo "  migrate-create - Create a new migration file"
 	@echo "  migrate-up     - Run migrations up"
 	@echo "  migrate-down   - Run migrations down"
+	@echo "  migrate-force  - Force migration version to fix dirty state"
 	@echo "  help           - Show this help message"
 
 .PHONY: build test clean run wire proto-install proto-clean proto-gen proto-swagger \
         lint fmt vet docker-build docker-run dev-deps test-coverage mocks help \
-        migrate-create migrate-up migrate-down
+        migrate-create migrate-up migrate-down migrate-force
