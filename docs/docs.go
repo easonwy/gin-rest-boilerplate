@@ -44,7 +44,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/model.LoginRequest"
+                            "$ref": "#/definitions/internal_transport_http_auth.LoginRequest"
                         }
                     }
                 ],
@@ -54,13 +54,13 @@ const docTemplate = `{
                         "schema": {
                             "allOf": [
                                 {
-                                    "$ref": "#/definitions/response.Response"
+                                    "$ref": "#/definitions/github_com_yi-tech_go-user-service_internal_transport_http_response.Response"
                                 },
                                 {
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/model.LoginResponse"
+                                            "$ref": "#/definitions/internal_transport_http_auth.LoginResponse"
                                         }
                                     }
                                 }
@@ -68,21 +68,21 @@ const docTemplate = `{
                         }
                     },
                     "400": {
-                        "description": "Invalid request body",
+                        "description": "Invalid request data",
                         "schema": {
-                            "$ref": "#/definitions/response.Response"
+                            "$ref": "#/definitions/github_com_yi-tech_go-user-service_internal_transport_http_response.Response"
                         }
                     },
                     "401": {
-                        "description": "Invalid credentials",
+                        "description": "Invalid email or password",
                         "schema": {
-                            "$ref": "#/definitions/response.Response"
+                            "$ref": "#/definitions/github_com_yi-tech_go-user-service_internal_transport_http_response.Response"
                         }
                     },
                     "500": {
                         "description": "Internal server error",
                         "schema": {
-                            "$ref": "#/definitions/response.Response"
+                            "$ref": "#/definitions/github_com_yi-tech_go-user-service_internal_transport_http_response.Response"
                         }
                     }
                 }
@@ -108,46 +108,29 @@ const docTemplate = `{
                 "summary": "User logout",
                 "responses": {
                     "200": {
-                        "description": "Successfully logged out",
+                        "description": "Logged out successfully",
                         "schema": {
-                            "allOf": [
-                                {
-                                    "$ref": "#/definitions/response.Response"
-                                },
-                                {
-                                    "type": "object",
-                                    "properties": {
-                                        "data": {
-                                            "type": "object",
-                                            "properties": {
-                                                "message": {
-                                                    "type": "string"
-                                                }
-                                            }
-                                        }
-                                    }
-                                }
-                            ]
+                            "$ref": "#/definitions/github_com_yi-tech_go-user-service_internal_transport_http_response.Response"
                         }
                     },
                     "401": {
-                        "description": "Unauthorized",
+                        "description": "Authentication required",
                         "schema": {
-                            "$ref": "#/definitions/response.Response"
+                            "$ref": "#/definitions/github_com_yi-tech_go-user-service_internal_transport_http_response.Response"
                         }
                     },
                     "500": {
                         "description": "Internal server error",
                         "schema": {
-                            "$ref": "#/definitions/response.Response"
+                            "$ref": "#/definitions/github_com_yi-tech_go-user-service_internal_transport_http_response.Response"
                         }
                     }
                 }
             }
         },
-        "/auth/refresh-token": {
+        "/auth/refresh": {
             "post": {
-                "description": "Refresh an expired access token using a valid refresh token",
+                "description": "Refresh an access token using a valid refresh token",
                 "consumes": [
                     "application/json"
                 ],
@@ -160,28 +143,28 @@ const docTemplate = `{
                 "summary": "Refresh access token",
                 "parameters": [
                     {
-                        "description": "Refresh token request",
+                        "description": "Refresh token",
                         "name": "request",
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/model.RefreshTokenRequest"
+                            "$ref": "#/definitions/internal_transport_http_auth.RefreshTokenRequest"
                         }
                     }
                 ],
                 "responses": {
                     "200": {
-                        "description": "Successfully refreshed token",
+                        "description": "Token refreshed successfully",
                         "schema": {
                             "allOf": [
                                 {
-                                    "$ref": "#/definitions/response.Response"
+                                    "$ref": "#/definitions/github_com_yi-tech_go-user-service_internal_transport_http_response.Response"
                                 },
                                 {
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/model.LoginResponse"
+                                            "$ref": "#/definitions/internal_transport_http_auth.LoginResponse"
                                         }
                                     }
                                 }
@@ -189,34 +172,29 @@ const docTemplate = `{
                         }
                     },
                     "400": {
-                        "description": "Invalid request body",
+                        "description": "Invalid request data",
                         "schema": {
-                            "$ref": "#/definitions/response.Response"
+                            "$ref": "#/definitions/github_com_yi-tech_go-user-service_internal_transport_http_response.Response"
                         }
                     },
                     "401": {
                         "description": "Invalid or expired refresh token",
                         "schema": {
-                            "$ref": "#/definitions/response.Response"
+                            "$ref": "#/definitions/github_com_yi-tech_go-user-service_internal_transport_http_response.Response"
                         }
                     },
                     "500": {
                         "description": "Internal server error",
                         "schema": {
-                            "$ref": "#/definitions/response.Response"
+                            "$ref": "#/definitions/github_com_yi-tech_go-user-service_internal_transport_http_response.Response"
                         }
                     }
                 }
             }
         },
-        "/users/email": {
+        "/users": {
             "get": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "description": "Get a user's details by their email address",
+                "description": "Retrieve a user's information by their email address",
                 "consumes": [
                     "application/json"
                 ],
@@ -238,17 +216,17 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "200": {
-                        "description": "Successfully retrieved user",
+                        "description": "User information",
                         "schema": {
                             "allOf": [
                                 {
-                                    "$ref": "#/definitions/response.Response"
+                                    "$ref": "#/definitions/github_com_yi-tech_go-user-service_internal_transport_http_response.Response"
                                 },
                                 {
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/dto.UserResponse"
+                                            "$ref": "#/definitions/internal_transport_http_user.UserResponse"
                                         }
                                     }
                                 }
@@ -256,21 +234,21 @@ const docTemplate = `{
                         }
                     },
                     "400": {
-                        "description": "Email query parameter is required",
+                        "description": "Email is required",
                         "schema": {
-                            "$ref": "#/definitions/response.Response"
+                            "$ref": "#/definitions/github_com_yi-tech_go-user-service_internal_transport_http_response.Response"
                         }
                     },
                     "404": {
                         "description": "User not found",
                         "schema": {
-                            "$ref": "#/definitions/response.Response"
+                            "$ref": "#/definitions/github_com_yi-tech_go-user-service_internal_transport_http_response.Response"
                         }
                     },
                     "500": {
-                        "description": "Failed to get user",
+                        "description": "Internal server error",
                         "schema": {
-                            "$ref": "#/definitions/response.Response"
+                            "$ref": "#/definitions/github_com_yi-tech_go-user-service_internal_transport_http_response.Response"
                         }
                     }
                 }
@@ -278,7 +256,7 @@ const docTemplate = `{
         },
         "/users/register": {
             "post": {
-                "description": "Register a new user with username, password, and email",
+                "description": "Register a new user with the provided information",
                 "consumes": [
                     "application/json"
                 ],
@@ -291,28 +269,28 @@ const docTemplate = `{
                 "summary": "Register a new user",
                 "parameters": [
                     {
-                        "description": "User registration request",
-                        "name": "user",
+                        "description": "User registration information",
+                        "name": "request",
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/dto.UserRegisterRequest"
+                            "$ref": "#/definitions/internal_transport_http_user.UserRegisterRequest"
                         }
                     }
                 ],
                 "responses": {
-                    "200": {
-                        "description": "Successfully registered user",
+                    "201": {
+                        "description": "User registered successfully",
                         "schema": {
                             "allOf": [
                                 {
-                                    "$ref": "#/definitions/response.Response"
+                                    "$ref": "#/definitions/github_com_yi-tech_go-user-service_internal_transport_http_response.Response"
                                 },
                                 {
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/dto.UserResponse"
+                                            "$ref": "#/definitions/internal_transport_http_user.UserResponse"
                                         }
                                     }
                                 }
@@ -320,15 +298,21 @@ const docTemplate = `{
                         }
                     },
                     "400": {
-                        "description": "Invalid request body",
+                        "description": "Invalid request data",
                         "schema": {
-                            "$ref": "#/definitions/response.Response"
+                            "$ref": "#/definitions/github_com_yi-tech_go-user-service_internal_transport_http_response.Response"
+                        }
+                    },
+                    "409": {
+                        "description": "Email already exists",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_yi-tech_go-user-service_internal_transport_http_response.Response"
                         }
                     },
                     "500": {
-                        "description": "Failed to register user",
+                        "description": "Internal server error",
                         "schema": {
-                            "$ref": "#/definitions/response.Response"
+                            "$ref": "#/definitions/github_com_yi-tech_go-user-service_internal_transport_http_response.Response"
                         }
                     }
                 }
@@ -336,12 +320,7 @@ const docTemplate = `{
         },
         "/users/{id}": {
             "get": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "description": "Get a user's details by their ID",
+                "description": "Retrieve a user's information by their ID",
                 "consumes": [
                     "application/json"
                 ],
@@ -354,7 +333,7 @@ const docTemplate = `{
                 "summary": "Get a user by ID",
                 "parameters": [
                     {
-                        "type": "integer",
+                        "type": "string",
                         "description": "User ID",
                         "name": "id",
                         "in": "path",
@@ -363,17 +342,17 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "200": {
-                        "description": "Successfully retrieved user",
+                        "description": "User information",
                         "schema": {
                             "allOf": [
                                 {
-                                    "$ref": "#/definitions/response.Response"
+                                    "$ref": "#/definitions/github_com_yi-tech_go-user-service_internal_transport_http_response.Response"
                                 },
                                 {
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/dto.UserResponse"
+                                            "$ref": "#/definitions/internal_transport_http_user.UserResponse"
                                         }
                                     }
                                 }
@@ -381,32 +360,27 @@ const docTemplate = `{
                         }
                     },
                     "400": {
-                        "description": "Invalid user ID",
+                        "description": "Invalid user ID format",
                         "schema": {
-                            "$ref": "#/definitions/response.Response"
+                            "$ref": "#/definitions/github_com_yi-tech_go-user-service_internal_transport_http_response.Response"
                         }
                     },
                     "404": {
                         "description": "User not found",
                         "schema": {
-                            "$ref": "#/definitions/response.Response"
+                            "$ref": "#/definitions/github_com_yi-tech_go-user-service_internal_transport_http_response.Response"
                         }
                     },
                     "500": {
-                        "description": "Failed to get user",
+                        "description": "Internal server error",
                         "schema": {
-                            "$ref": "#/definitions/response.Response"
+                            "$ref": "#/definitions/github_com_yi-tech_go-user-service_internal_transport_http_response.Response"
                         }
                     }
                 }
             },
             "put": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "description": "Update an existing user's details by their ID",
+                "description": "Update a user's profile information",
                 "consumes": [
                     "application/json"
                 ],
@@ -416,38 +390,38 @@ const docTemplate = `{
                 "tags": [
                     "users"
                 ],
-                "summary": "Update an existing user",
+                "summary": "Update user profile",
                 "parameters": [
                     {
-                        "type": "integer",
+                        "type": "string",
                         "description": "User ID",
                         "name": "id",
                         "in": "path",
                         "required": true
                     },
                     {
-                        "description": "User update request",
-                        "name": "user",
+                        "description": "User update information",
+                        "name": "request",
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/dto.UserUpdateRequest"
+                            "$ref": "#/definitions/internal_transport_http_user.UserUpdateRequest"
                         }
                     }
                 ],
                 "responses": {
                     "200": {
-                        "description": "Successfully updated user",
+                        "description": "User updated successfully",
                         "schema": {
                             "allOf": [
                                 {
-                                    "$ref": "#/definitions/response.Response"
+                                    "$ref": "#/definitions/github_com_yi-tech_go-user-service_internal_transport_http_response.Response"
                                 },
                                 {
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/dto.UserResponse"
+                                            "$ref": "#/definitions/internal_transport_http_user.UserResponse"
                                         }
                                     }
                                 }
@@ -455,25 +429,26 @@ const docTemplate = `{
                         }
                     },
                     "400": {
-                        "description": "Invalid user ID or request body",
+                        "description": "Invalid request data or user ID format",
                         "schema": {
-                            "$ref": "#/definitions/response.Response"
+                            "$ref": "#/definitions/github_com_yi-tech_go-user-service_internal_transport_http_response.Response"
+                        }
+                    },
+                    "404": {
+                        "description": "User not found",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_yi-tech_go-user-service_internal_transport_http_response.Response"
                         }
                     },
                     "500": {
-                        "description": "Failed to update user",
+                        "description": "Internal server error",
                         "schema": {
-                            "$ref": "#/definitions/response.Response"
+                            "$ref": "#/definitions/github_com_yi-tech_go-user-service_internal_transport_http_response.Response"
                         }
                     }
                 }
             },
             "delete": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
                 "description": "Delete a user by their ID",
                 "consumes": [
                     "application/json"
@@ -484,10 +459,10 @@ const docTemplate = `{
                 "tags": [
                     "users"
                 ],
-                "summary": "Delete a user by ID",
+                "summary": "Delete a user",
                 "parameters": [
                     {
-                        "type": "integer",
+                        "type": "string",
                         "description": "User ID",
                         "name": "id",
                         "in": "path",
@@ -496,38 +471,92 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "200": {
-                        "description": "Successfully deleted user",
+                        "description": "User deleted successfully",
                         "schema": {
-                            "allOf": [
-                                {
-                                    "$ref": "#/definitions/response.Response"
-                                },
-                                {
-                                    "type": "object",
-                                    "properties": {
-                                        "data": {
-                                            "type": "object",
-                                            "properties": {
-                                                "message": {
-                                                    "type": "string"
-                                                }
-                                            }
-                                        }
-                                    }
-                                }
-                            ]
+                            "$ref": "#/definitions/github_com_yi-tech_go-user-service_internal_transport_http_response.Response"
                         }
                     },
                     "400": {
-                        "description": "Invalid user ID",
+                        "description": "Invalid user ID format",
                         "schema": {
-                            "$ref": "#/definitions/response.Response"
+                            "$ref": "#/definitions/github_com_yi-tech_go-user-service_internal_transport_http_response.Response"
+                        }
+                    },
+                    "404": {
+                        "description": "User not found",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_yi-tech_go-user-service_internal_transport_http_response.Response"
                         }
                     },
                     "500": {
-                        "description": "Failed to delete user",
+                        "description": "Internal server error",
                         "schema": {
-                            "$ref": "#/definitions/response.Response"
+                            "$ref": "#/definitions/github_com_yi-tech_go-user-service_internal_transport_http_response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/users/{id}/password": {
+            "put": {
+                "description": "Update a user's password",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "users"
+                ],
+                "summary": "Update user password",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "User ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Password update information",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/internal_transport_http_user.UpdatePasswordRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Password updated successfully",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_yi-tech_go-user-service_internal_transport_http_response.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid request data or user ID format",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_yi-tech_go-user-service_internal_transport_http_response.Response"
+                        }
+                    },
+                    "401": {
+                        "description": "Current password is incorrect",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_yi-tech_go-user-service_internal_transport_http_response.Response"
+                        }
+                    },
+                    "404": {
+                        "description": "User not found",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_yi-tech_go-user-service_internal_transport_http_response.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_yi-tech_go-user-service_internal_transport_http_response.Response"
                         }
                     }
                 }
@@ -535,63 +564,19 @@ const docTemplate = `{
         }
     },
     "definitions": {
-        "dto.UserRegisterRequest": {
-            "type": "object",
-            "required": [
-                "email",
-                "password",
-                "username"
-            ],
-            "properties": {
-                "email": {
-                    "type": "string"
-                },
-                "password": {
-                    "type": "string",
-                    "minLength": 6
-                },
-                "username": {
-                    "type": "string"
-                }
-            }
-        },
-        "dto.UserResponse": {
+        "github_com_yi-tech_go-user-service_internal_transport_http_response.Response": {
             "type": "object",
             "properties": {
-                "created_at": {
-                    "type": "string"
-                },
-                "email": {
-                    "type": "string"
-                },
-                "id": {
+                "code": {
                     "type": "integer"
                 },
-                "updated_at": {
-                    "type": "string"
-                },
-                "username": {
+                "data": {},
+                "message": {
                     "type": "string"
                 }
             }
         },
-        "dto.UserUpdateRequest": {
-            "type": "object",
-            "properties": {
-                "email": {
-                    "type": "string"
-                },
-                "password": {
-                    "type": "string",
-                    "minLength": 6
-                },
-                "username": {
-                    "description": "Use pointers for optional fields",
-                    "type": "string"
-                }
-            }
-        },
-        "model.LoginRequest": {
+        "internal_transport_http_auth.LoginRequest": {
             "type": "object",
             "required": [
                 "email",
@@ -606,7 +591,7 @@ const docTemplate = `{
                 }
             }
         },
-        "model.LoginResponse": {
+        "internal_transport_http_auth.LoginResponse": {
             "type": "object",
             "properties": {
                 "access_token": {
@@ -621,7 +606,7 @@ const docTemplate = `{
                 }
             }
         },
-        "model.RefreshTokenRequest": {
+        "internal_transport_http_auth.RefreshTokenRequest": {
             "type": "object",
             "required": [
                 "refresh_token"
@@ -632,14 +617,79 @@ const docTemplate = `{
                 }
             }
         },
-        "response.Response": {
+        "internal_transport_http_user.UpdatePasswordRequest": {
+            "type": "object",
+            "required": [
+                "current_password",
+                "new_password"
+            ],
+            "properties": {
+                "current_password": {
+                    "type": "string"
+                },
+                "new_password": {
+                    "type": "string",
+                    "minLength": 8
+                }
+            }
+        },
+        "internal_transport_http_user.UserRegisterRequest": {
+            "type": "object",
+            "required": [
+                "email",
+                "first_name",
+                "last_name",
+                "password"
+            ],
+            "properties": {
+                "email": {
+                    "type": "string"
+                },
+                "first_name": {
+                    "type": "string"
+                },
+                "last_name": {
+                    "type": "string"
+                },
+                "password": {
+                    "type": "string",
+                    "minLength": 8
+                }
+            }
+        },
+        "internal_transport_http_user.UserResponse": {
             "type": "object",
             "properties": {
-                "code": {
-                    "type": "integer"
+                "created_at": {
+                    "type": "string"
                 },
-                "data": {},
-                "message": {
+                "email": {
+                    "type": "string"
+                },
+                "first_name": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "last_name": {
+                    "type": "string"
+                },
+                "updated_at": {
+                    "type": "string"
+                }
+            }
+        },
+        "internal_transport_http_user.UserUpdateRequest": {
+            "type": "object",
+            "properties": {
+                "email": {
+                    "type": "string"
+                },
+                "first_name": {
+                    "type": "string"
+                },
+                "last_name": {
                     "type": "string"
                 }
             }

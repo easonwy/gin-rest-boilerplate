@@ -42,7 +42,7 @@ func AuthMiddleware(authService auth.AuthService, logger *zap.Logger) gin.Handle
 
 		// Set the user ID in the context for handlers to use
 		c.Set("user_id", userID)
-		
+
 		c.Next()
 	}
 }

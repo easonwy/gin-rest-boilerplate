@@ -69,7 +69,7 @@ func (r *AuthRepositoryImpl) GetUserIDByRefreshToken(ctx context.Context, token 
 		}
 		return uuid.Nil, fmt.Errorf("failed to get user ID by refresh token from redis: %w", err)
 	}
-	
+
 	parsedUserID, err := uuid.Parse(userIDStr) // Parse string to uuid.UUID
 	if err != nil {
 		return uuid.Nil, fmt.Errorf("failed to parse user ID '%s' from redis: %w", userIDStr, err)

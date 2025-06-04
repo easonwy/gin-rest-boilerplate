@@ -101,14 +101,14 @@ func TestLogin(t *testing.T) {
 				mockService.On("Login", mock.AnythingOfType("*gin.Context"), "test@example.com", "password").Return(mockTokenPair, nil)
 			},
 			expectedStatus: http.StatusOK,
-			expectedBody:   `{"access_token":"mock-access-token","refresh_token":"mock-refresh-token","expires_in":3600}`, // Handler constructs this response
+			expectedBody:   `{"code":200,"message":"Success","data":{"access_token":"mock-access-token","refresh_token":"mock-refresh-token","expires_in":3600}}`,
 		},
 		{
 			name:           "Invalid Request Data - Bad JSON",
 			body:           `{"email": "test@example.com", "password": "password"`, // Malformed JSON
 			setupMock:      func(mockService *MockAuthService) {},
 			expectedStatus: http.StatusBadRequest,
-			expectedBody:   `{"error":"Invalid request data"}`,
+			expectedBody:   `{"code":400,"message":"Invalid request data"}`,
 		},
 		{
 			name: "Invalid Request Data - Missing Fields",
@@ -117,7 +117,7 @@ func TestLogin(t *testing.T) {
 				// No mock call expected as ShouldBindJSON should fail first
 			},
 			expectedStatus: http.StatusBadRequest,
-			expectedBody:   `{"error":"Invalid request data"}`,
+			expectedBody:   `{"code":400,"message":"Invalid request data"}`,
 		},
 		{
 			name: "Invalid Credentials",
@@ -126,7 +126,7 @@ func TestLogin(t *testing.T) {
 				mockService.On("Login", mock.AnythingOfType("*gin.Context"), "wrong@example.com", "wrong").Return(nil, errors.New("invalid credentials"))
 			},
 			expectedStatus: http.StatusUnauthorized,
-			expectedBody:   `{"error":"Invalid email or password"}`,
+			expectedBody:   `{"code":401,"message":"Invalid email or password"}`,
 		},
 		{
 			name: "Internal ServerError",
@@ -135,7 +135,7 @@ func TestLogin(t *testing.T) {
 				mockService.On("Login", mock.AnythingOfType("*gin.Context"), "error@example.com", "password").Return(nil, errors.New("database error"))
 			},
 			expectedStatus: http.StatusInternalServerError,
-			expectedBody:   `{"error":"Failed to login"}`,
+			expectedBody:   `{"code":500,"message":"Something went wrong. Please try again later."}`,
 		},
 	}
 
@@ -162,7 +162,7 @@ func TestLogin(t *testing.T) {
 
 			req, _ := http.NewRequestWithContext(ctx, http.MethodPost, "/login", reqBodyReader)
 			if tc.body != nil && (tc.name != "Invalid Request Data - Bad JSON") {
-			    req.Header.Set("Content-Type", "application/json")
+				req.Header.Set("Content-Type", "application/json")
 			}
 
 			router.ServeHTTP(rr, req)
@@ -194,14 +194,14 @@ func TestRefreshToken(t *testing.T) {
 				mockService.On("RefreshToken", mock.AnythingOfType("*gin.Context"), "valid-refresh-token").Return(mockTokenPair, nil)
 			},
 			expectedStatus: http.StatusOK,
-			expectedBody:   `{"access_token":"mock-access-token","refresh_token":"mock-refresh-token","expires_in":3600}`, // Handler constructs this response
+			expectedBody:   `{"code":200,"message":"Success","data":{"access_token":"mock-access-token","refresh_token":"mock-refresh-token","expires_in":3600}}`,
 		},
 		{
 			name:           "Invalid Request Data - Bad JSON",
 			body:           `{"refresh_token": "valid-refresh-token"`, // Malformed JSON
 			setupMock:      func(mockService *MockAuthService) {},
 			expectedStatus: http.StatusBadRequest,
-			expectedBody:   `{"error":"Invalid request data"}`,
+			expectedBody:   `{"code":400,"message":"Invalid request data"}`,
 		},
 		{
 			name: "Invalid Request Data - Missing Refresh Token",
@@ -210,7 +210,7 @@ func TestRefreshToken(t *testing.T) {
 				// No mock call expected as ShouldBindJSON should fail first
 			},
 			expectedStatus: http.StatusBadRequest,
-			expectedBody:   `{"error":"Invalid request data"}`,
+			expectedBody:   `{"code":400,"message":"Invalid request data"}`,
 		},
 		{
 			name: "Invalid or Expired Token",
@@ -219,7 +219,7 @@ func TestRefreshToken(t *testing.T) {
 				mockService.On("RefreshToken", mock.AnythingOfType("*gin.Context"), "invalid-token").Return(nil, errors.New("invalid or expired refresh token"))
 			},
 			expectedStatus: http.StatusUnauthorized,
-			expectedBody:   `{"error":"Invalid or expired refresh token"}`,
+			expectedBody:   `{"code":401,"message":"Invalid or expired refresh token"}`,
 		},
 		{
 			name: "Internal Server Error on Refresh",
@@ -228,7 +228,7 @@ func TestRefreshToken(t *testing.T) {
 				mockService.On("RefreshToken", mock.AnythingOfType("*gin.Context"), "error-token").Return(nil, errors.New("database error"))
 			},
 			expectedStatus: http.StatusInternalServerError,
-			expectedBody:   `{"error":"Failed to refresh token"}`,
+			expectedBody:   `{"code":500,"message":"Something went wrong. Please try again later."}`,
 		},
 	}
 
@@ -255,7 +255,7 @@ func TestRefreshToken(t *testing.T) {
 
 			req, _ := http.NewRequestWithContext(ctx, http.MethodPost, "/refresh", reqBodyReader)
 			if tc.body != nil && (tc.name != "Invalid Request Data - Bad JSON") {
-			    req.Header.Set("Content-Type", "application/json")
+				req.Header.Set("Content-Type", "application/json")
 			}
 
 			router.ServeHTTP(rr, req)
@@ -289,14 +289,14 @@ func TestLogout(t *testing.T) {
 				mockService.On("Logout", mock.Anything, userID).Return(nil)
 			},
 			expectedStatus: http.StatusOK,
-			expectedBody:   `{"message":"Logged out successfully"}`,
+			expectedBody:   `{"code":200,"message":"Success","data":{"message":"Logged out successfully"}}`,
 		},
 		{
 			name:           "Authentication Required - No User ID in Context",
 			setupContext:   nil, // No context setup needed, or func(c *gin.Context) {}
 			setupMock:      func(mockService *MockAuthService) {},
 			expectedStatus: http.StatusUnauthorized,
-			expectedBody:   `{"error":"Authentication required"}`,
+			expectedBody:   `{"code":401,"message":"Authentication required"}`,
 		},
 		{
 			name: "Internal Server Error - Invalid User ID Type in Context",
@@ -305,7 +305,7 @@ func TestLogout(t *testing.T) {
 			},
 			setupMock:      func(mockService *MockAuthService) {},
 			expectedStatus: http.StatusInternalServerError,
-			expectedBody:   `{"error":"Internal server error, user ID type mismatch"}`,
+			expectedBody:   `{"code":500,"message":"Something went wrong. Please try again later."}`,
 		},
 		{
 			name: "Internal Server Error - Logout Fails",
@@ -318,7 +318,7 @@ func TestLogout(t *testing.T) {
 				mockService.On("Logout", mock.Anything, userID).Return(errors.New("session not found"))
 			},
 			expectedStatus: http.StatusInternalServerError,
-			expectedBody:   `{"error":"Failed to logout"}`,
+			expectedBody:   `{"code":500,"message":"Something went wrong. Please try again later."}`,
 		},
 	}
 
@@ -329,7 +329,7 @@ func TestLogout(t *testing.T) {
 
 			handler := NewHandler(mockService, logger)
 			rr := httptest.NewRecorder()
-			 // We only need the router from CreateTestContext. The returned context is not used directly for setting handler keys.
+			// We only need the router from CreateTestContext. The returned context is not used directly for setting handler keys.
 			_, router := gin.CreateTestContext(rr)
 
 			// Define the endpoint with a wrapper that sets up the context for the handler
@@ -337,7 +337,7 @@ func TestLogout(t *testing.T) {
 				if tc.setupContext != nil {
 					tc.setupContext(c) // Apply context modifications to the actual handler's context
 				}
-				handler.Logout(c)    // Call the actual handler
+				handler.Logout(c) // Call the actual handler
 			})
 
 			// Create a plain request. The context of this request (req.Context()) will be available

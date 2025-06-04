@@ -11,19 +11,19 @@ import (
 	"gorm.io/gorm"
 
 	"github.com/yi-tech/go-user-service/internal/config"
-	"github.com/yi-tech/go-user-service/internal/provider"
 	domainAuth "github.com/yi-tech/go-user-service/internal/domain/auth"
+	"github.com/yi-tech/go-user-service/internal/middleware"
+	"github.com/yi-tech/go-user-service/internal/provider"
 	repoAuth "github.com/yi-tech/go-user-service/internal/repository/auth"
 	repoUser "github.com/yi-tech/go-user-service/internal/repository/user"
 	serviceAuth "github.com/yi-tech/go-user-service/internal/service/auth"
 	serviceUser "github.com/yi-tech/go-user-service/internal/service/user"
+	grpc "github.com/yi-tech/go-user-service/internal/transport/grpc"
 	grpcAuth "github.com/yi-tech/go-user-service/internal/transport/grpc/auth"
 	grpcUser "github.com/yi-tech/go-user-service/internal/transport/grpc/user"
+	http "github.com/yi-tech/go-user-service/internal/transport/http"
 	httpAuth "github.com/yi-tech/go-user-service/internal/transport/http/auth"
 	httpUser "github.com/yi-tech/go-user-service/internal/transport/http/user"
-	grpc "github.com/yi-tech/go-user-service/internal/transport/grpc"
-	http "github.com/yi-tech/go-user-service/internal/transport/http"
-	"github.com/yi-tech/go-user-service/internal/middleware"
 )
 
 // ProvideGRPCConfig provides the gRPC server configuration
@@ -122,5 +122,3 @@ func ProvideRouter(userHandler *httpUser.Handler, authHandler *httpAuth.Handler,
 func ProvideHTTPServer(router *gin.Engine, cfg *config.Config) *http.Server {
 	return http.NewServer(router, cfg)
 }
-
-

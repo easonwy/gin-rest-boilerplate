@@ -1,21 +1,13 @@
 {
   "swagger": "2.0",
   "info": {
-    "title": "User Service API",
-    "version": "1.0",
-    "contact": {
-      "name": "Yi Tech Lab",
-      "url": "https://github.com/yi-tech"
-    }
+    "title": "user/v1/user.proto",
+    "version": "version not set"
   },
   "tags": [
     {
       "name": "UserService"
     }
-  ],
-  "schemes": [
-    "http",
-    "https"
   ],
   "consumes": [
     "application/json"
@@ -192,7 +184,10 @@
     "UserServiceUpdateProfileBody": {
       "type": "object",
       "properties": {
-        "full_name": {
+        "first_name": {
+          "type": "string"
+        },
+        "last_name": {
           "type": "string"
         },
         "email": {
@@ -239,7 +234,7 @@
     "v1LoginRequest": {
       "type": "object",
       "properties": {
-        "username": {
+        "email": {
           "type": "string"
         },
         "password": {
@@ -264,16 +259,16 @@
     "v1RegisterRequest": {
       "type": "object",
       "properties": {
-        "username": {
-          "type": "string"
-        },
         "email": {
           "type": "string"
         },
         "password": {
           "type": "string"
         },
-        "full_name": {
+        "first_name": {
+          "type": "string"
+        },
+        "last_name": {
           "type": "string"
         }
       },
@@ -285,13 +280,13 @@
         "id": {
           "type": "string"
         },
-        "username": {
-          "type": "string"
-        },
         "email": {
           "type": "string"
         },
-        "full_name": {
+        "first_name": {
+          "type": "string"
+        },
+        "last_name": {
           "type": "string"
         },
         "is_active": {

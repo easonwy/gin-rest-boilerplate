@@ -13,8 +13,9 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/emptypb"
+	"google.golang.org/protobuf/types/known/timestamppb"
 
-	pb "github.com/yi-tech/go-user-service/api/proto/user"
+	userpb "github.com/yi-tech/go-user-service/api/proto/user/v1"
 	domainUser "github.com/yi-tech/go-user-service/internal/domain/user"
 )
 
@@ -65,6 +66,14 @@ func (m *MockUserService) DeleteUser(ctx context.Context, id uuid.UUID) error {
 	return args.Error(0)
 }
 
+func (m *MockUserService) Update(ctx context.Context, id uuid.UUID, params domainUser.UpdateUserParams) (*domainUser.User, error) {
+	args := m.Called(ctx, id, params)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*domainUser.User), args.Error(1)
+}
+
 func createMockUser() *domainUser.User {
 	return &domainUser.User{
 		ID:        uuid.New(), // Or a fixed test UUID: uuid.MustParse("your-test-uuid-here")
@@ -80,9 +89,9 @@ func createMockUser() *domainUser.User {
 func TestNewHandler(t *testing.T) {
 	mockService := new(MockUserService)
 	logger := zaptest.NewLogger(t)
-	
+
 	handler := NewHandler(mockService, logger)
-	
+
 	assert.NotNil(t, handler)
 	assert.Equal(t, mockService, handler.userService)
 	assert.Equal(t, logger, handler.logger)
@@ -93,18 +102,18 @@ func TestRegister(t *testing.T) {
 	logger := zaptest.NewLogger(t)
 	handler := NewHandler(mockService, logger)
 	ctx := context.Background()
-	
+
 	tests := []struct {
 		name          string
-		request       *pb.RegisterRequest
+		request       *userpb.RegisterRequest
 		setupMock     func()
 		expectedCode  codes.Code
-		expectedUser  *pb.User
-		checkResponse func(*pb.User)
+		expectedUser  *userpb.User
+		checkResponse func(*userpb.User)
 	}{
 		{
 			name: "Success",
-			request: &pb.RegisterRequest{
+			request: &userpb.RegisterRequest{
 				Email:     "test@example.com",
 				Password:  "password123",
 				FirstName: "Test",
@@ -115,7 +124,8 @@ func TestRegister(t *testing.T) {
 				mockService.On("Register", ctx, "test@example.com", "password123", "Test", "User").Return(mockUser, nil)
 			},
 			expectedCode: codes.OK,
-			checkResponse: func(user *pb.User) {
+			checkResponse: func(user *userpb.User) {
+				assert.NotNil(t, user)
 				assert.NotEmpty(t, user.Id) // UUID format
 				assert.Equal(t, "test@example.com", user.Email)
 				assert.Equal(t, "Test", user.FirstName)
@@ -123,7 +133,7 @@ func TestRegister(t *testing.T) {
 		},
 		{
 			name: "Missing Required Fields",
-			request: &pb.RegisterRequest{
+			request: &userpb.RegisterRequest{
 				Email:    "test@example.com",
 				Password: "password123",
 				// Missing FirstName
@@ -135,7 +145,7 @@ func TestRegister(t *testing.T) {
 		},
 		{
 			name: "User Already Exists",
-			request: &pb.RegisterRequest{
+			request: &userpb.RegisterRequest{
 				Email:     "existing@example.com",
 				Password:  "password123",
 				FirstName: "Existing",
@@ -149,7 +159,7 @@ func TestRegister(t *testing.T) {
 		},
 		{
 			name: "Internal Error",
-			request: &pb.RegisterRequest{
+			request: &userpb.RegisterRequest{
 				Email:     "error@example.com",
 				Password:  "password123",
 				FirstName: "Error",
@@ -162,13 +172,13 @@ func TestRegister(t *testing.T) {
 			expectedCode: codes.Internal,
 		},
 	}
-	
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			tt.setupMock()
-			
+
 			response, err := handler.Register(ctx, tt.request)
-			
+
 			if tt.expectedCode != codes.OK {
 				assert.Error(t, err)
 				st, ok := status.FromError(err)
@@ -186,19 +196,19 @@ func TestRegister(t *testing.T) {
 func TestGetUserByID(t *testing.T) {
 	logger := zaptest.NewLogger(t)
 	ctx := context.Background()
-	
+
 	validUUID := uuid.New()
-	
+
 	tests := []struct {
 		name          string
-		request       *pb.GetUserByIDRequest
+		request       *userpb.GetProfileRequest
 		setupMock     func(*MockUserService)
 		expectedCode  codes.Code
-		checkResponse func(*pb.User)
+		checkResponse func(*userpb.User)
 	}{
 		{
 			name: "Success",
-			request: &pb.GetUserByIDRequest{
+			request: &userpb.GetProfileRequest{
 				Id: validUUID.String(),
 			},
 			setupMock: func(mockService *MockUserService) {
@@ -206,14 +216,14 @@ func TestGetUserByID(t *testing.T) {
 				mockService.On("GetByID", ctx, validUUID).Return(mockUser, nil)
 			},
 			expectedCode: codes.OK,
-			checkResponse: func(user *pb.User) {
+			checkResponse: func(user *userpb.User) {
 				assert.NotEmpty(t, user.Id) // UUID format
 				assert.Equal(t, "test@example.com", user.Email)
 			},
 		},
 		{
 			name: "Invalid UUID",
-			request: &pb.GetUserByIDRequest{
+			request: &userpb.GetProfileRequest{
 				Id: "invalid-uuid",
 			},
 			setupMock: func(mockService *MockUserService) {
@@ -223,7 +233,7 @@ func TestGetUserByID(t *testing.T) {
 		},
 		{
 			name: "User Not Found",
-			request: &pb.GetUserByIDRequest{
+			request: &userpb.GetProfileRequest{
 				Id: validUUID.String(),
 			},
 			setupMock: func(mockService *MockUserService) {
@@ -233,7 +243,7 @@ func TestGetUserByID(t *testing.T) {
 		},
 		{
 			name: "Internal Error",
-			request: &pb.GetUserByIDRequest{
+			request: &userpb.GetProfileRequest{
 				Id: validUUID.String(),
 			},
 			setupMock: func(mockService *MockUserService) {
@@ -242,18 +252,18 @@ func TestGetUserByID(t *testing.T) {
 			expectedCode: codes.Internal,
 		},
 	}
-	
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			// Create a fresh handler and mock for each test to avoid interference
 			mockService := new(MockUserService)
 			handler := NewHandler(mockService, logger)
-			
+
 			// Setup the mock expectations
 			tt.setupMock(mockService)
-			
+
 			response, err := handler.GetUserByID(ctx, tt.request)
-			
+
 			if tt.expectedCode != codes.OK {
 				assert.Error(t, err)
 				st, ok := status.FromError(err)
@@ -264,7 +274,7 @@ func TestGetUserByID(t *testing.T) {
 				assert.NotNil(t, response)
 				tt.checkResponse(response)
 			}
-			
+
 			// Verify that all expected mock calls were made
 			mockService.AssertExpectations(t)
 		})
@@ -276,17 +286,17 @@ func TestGetUserByEmail(t *testing.T) {
 	logger := zaptest.NewLogger(t)
 	handler := NewHandler(mockService, logger)
 	ctx := context.Background()
-	
+
 	tests := []struct {
 		name          string
-		request       *pb.GetUserByEmailRequest
+		request       *GetUserByEmailRequest
 		setupMock     func()
 		expectedCode  codes.Code
-		checkResponse func(*pb.User)
+		checkResponse func(*userpb.User)
 	}{
 		{
 			name: "Success",
-			request: &pb.GetUserByEmailRequest{
+			request: &GetUserByEmailRequest{
 				Email: "test@example.com",
 			},
 			setupMock: func() {
@@ -294,14 +304,14 @@ func TestGetUserByEmail(t *testing.T) {
 				mockService.On("GetByEmail", ctx, "test@example.com").Return(mockUser, nil)
 			},
 			expectedCode: codes.OK,
-			checkResponse: func(user *pb.User) {
+			checkResponse: func(user *userpb.User) {
 				assert.NotEmpty(t, user.Id) // UUID format
 				assert.Equal(t, "test@example.com", user.Email)
 			},
 		},
 		{
 			name: "Empty Email",
-			request: &pb.GetUserByEmailRequest{
+			request: &GetUserByEmailRequest{
 				Email: "",
 			},
 			setupMock: func() {
@@ -311,7 +321,7 @@ func TestGetUserByEmail(t *testing.T) {
 		},
 		{
 			name: "User Not Found",
-			request: &pb.GetUserByEmailRequest{
+			request: &GetUserByEmailRequest{
 				Email: "notfound@example.com",
 			},
 			setupMock: func() {
@@ -321,7 +331,7 @@ func TestGetUserByEmail(t *testing.T) {
 		},
 		{
 			name: "Internal Error",
-			request: &pb.GetUserByEmailRequest{
+			request: &GetUserByEmailRequest{
 				Email: "error@example.com",
 			},
 			setupMock: func() {
@@ -330,13 +340,13 @@ func TestGetUserByEmail(t *testing.T) {
 			expectedCode: codes.Internal,
 		},
 	}
-	
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			tt.setupMock()
-			
+
 			response, err := handler.GetUserByEmail(ctx, tt.request)
-			
+
 			if tt.expectedCode != codes.OK {
 				assert.Error(t, err)
 				st, ok := status.FromError(err)
@@ -354,32 +364,32 @@ func TestGetUserByEmail(t *testing.T) {
 func TestUpdateUser(t *testing.T) {
 	logger := zaptest.NewLogger(t)
 	ctx := context.Background()
-	
+
 	validUUID := uuid.New()
-	
+
 	tests := []struct {
 		name          string
-		request       *pb.UpdateUserRequest
+		request       *UpdateUserRequest
 		setupMock     func(*MockUserService)
 		expectedCode  codes.Code
-		checkResponse func(*pb.User)
+		checkResponse func(*userpb.User)
 	}{
 		{
 			name: "Success",
-			request: &pb.UpdateUserRequest{
+			request: &UpdateUserRequest{
 				Id:        validUUID.String(),
 				FirstName: "Updated",
 				LastName:  "User",
 			},
 			setupMock: func(mockService *MockUserService) {
 				updatedUser := createMockUser() // ID will be a new random UUID
-				updatedUser.ID = validUUID // Ensure the mock returns the expected ID
+				updatedUser.ID = validUUID      // Ensure the mock returns the expected ID
 				updatedUser.FirstName = "Updated"
 				updatedUser.LastName = "User" // Assuming LastName is also part of the update or should match createMockUser
 				mockService.On("UpdateUser", ctx, validUUID, "Updated", "User").Return(updatedUser, nil)
 			},
 			expectedCode: codes.OK,
-			checkResponse: func(user *pb.User) {
+			checkResponse: func(user *userpb.User) {
 				assert.Equal(t, validUUID.String(), user.Id)
 				assert.Equal(t, "Updated", user.FirstName)
 				assert.Equal(t, "User", user.LastName) // Add assertion for LastName
@@ -387,7 +397,7 @@ func TestUpdateUser(t *testing.T) {
 		},
 		{
 			name: "Invalid UUID",
-			request: &pb.UpdateUserRequest{
+			request: &UpdateUserRequest{
 				Id:        "invalid-uuid",
 				FirstName: "Updated",
 				LastName:  "User",
@@ -399,7 +409,7 @@ func TestUpdateUser(t *testing.T) {
 		},
 		{
 			name: "Missing First Name",
-			request: &pb.UpdateUserRequest{
+			request: &UpdateUserRequest{
 				Id:       validUUID.String(),
 				LastName: "User",
 			},
@@ -410,7 +420,7 @@ func TestUpdateUser(t *testing.T) {
 		},
 		{
 			name: "User Not Found",
-			request: &pb.UpdateUserRequest{
+			request: &UpdateUserRequest{
 				Id:        validUUID.String(),
 				FirstName: "Updated",
 				LastName:  "User",
@@ -422,7 +432,7 @@ func TestUpdateUser(t *testing.T) {
 		},
 		{
 			name: "Internal Error",
-			request: &pb.UpdateUserRequest{
+			request: &UpdateUserRequest{
 				Id:        validUUID.String(),
 				FirstName: "Updated",
 				LastName:  "User",
@@ -433,18 +443,18 @@ func TestUpdateUser(t *testing.T) {
 			expectedCode: codes.Internal,
 		},
 	}
-	
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			// Create a fresh handler and mock for each test to avoid interference
 			mockService := new(MockUserService)
 			handler := NewHandler(mockService, logger)
-			
+
 			// Setup the mock expectations
 			tt.setupMock(mockService)
-			
+
 			response, err := handler.UpdateUser(ctx, tt.request)
-			
+
 			if tt.expectedCode != codes.OK {
 				assert.Error(t, err)
 				st, ok := status.FromError(err)
@@ -455,7 +465,7 @@ func TestUpdateUser(t *testing.T) {
 				assert.NotNil(t, response)
 				tt.checkResponse(response)
 			}
-			
+
 			// Verify that all expected mock calls were made
 			mockService.AssertExpectations(t)
 		})
@@ -465,18 +475,18 @@ func TestUpdateUser(t *testing.T) {
 func TestUpdatePassword(t *testing.T) {
 	logger := zaptest.NewLogger(t)
 	ctx := context.Background()
-	
+
 	validUUID := uuid.New()
-	
+
 	tests := []struct {
 		name         string
-		request      *pb.UpdatePasswordRequest
+		request      *UpdatePasswordRequest
 		setupMock    func(*MockUserService)
 		expectedCode codes.Code
 	}{
 		{
 			name: "Success",
-			request: &pb.UpdatePasswordRequest{
+			request: &UpdatePasswordRequest{
 				Id:              validUUID.String(),
 				CurrentPassword: "oldpassword",
 				NewPassword:     "newpassword",
@@ -488,7 +498,7 @@ func TestUpdatePassword(t *testing.T) {
 		},
 		{
 			name: "Invalid UUID",
-			request: &pb.UpdatePasswordRequest{
+			request: &UpdatePasswordRequest{
 				Id:              "invalid-uuid",
 				CurrentPassword: "oldpassword",
 				NewPassword:     "newpassword",
@@ -500,7 +510,7 @@ func TestUpdatePassword(t *testing.T) {
 		},
 		{
 			name: "Missing Passwords",
-			request: &pb.UpdatePasswordRequest{
+			request: &UpdatePasswordRequest{
 				Id:              validUUID.String(),
 				CurrentPassword: "",
 				NewPassword:     "",
@@ -512,7 +522,7 @@ func TestUpdatePassword(t *testing.T) {
 		},
 		{
 			name: "User Not Found",
-			request: &pb.UpdatePasswordRequest{
+			request: &UpdatePasswordRequest{
 				Id:              validUUID.String(),
 				CurrentPassword: "oldpassword",
 				NewPassword:     "newpassword",
@@ -524,7 +534,7 @@ func TestUpdatePassword(t *testing.T) {
 		},
 		{
 			name: "Internal Error",
-			request: &pb.UpdatePasswordRequest{
+			request: &UpdatePasswordRequest{
 				Id:              validUUID.String(),
 				CurrentPassword: "oldpassword",
 				NewPassword:     "newpassword",
@@ -535,18 +545,18 @@ func TestUpdatePassword(t *testing.T) {
 			expectedCode: codes.Internal,
 		},
 	}
-	
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			// Create a fresh handler and mock for each test to avoid interference
 			mockService := new(MockUserService)
 			handler := NewHandler(mockService, logger)
-			
+
 			// Setup the mock expectations
 			tt.setupMock(mockService)
-			
+
 			response, err := handler.UpdatePassword(ctx, tt.request)
-			
+
 			if tt.expectedCode != codes.OK {
 				assert.Error(t, err)
 				st, ok := status.FromError(err)
@@ -557,7 +567,7 @@ func TestUpdatePassword(t *testing.T) {
 				assert.NotNil(t, response)
 				assert.IsType(t, &emptypb.Empty{}, response)
 			}
-			
+
 			// Verify that all expected mock calls were made
 			mockService.AssertExpectations(t)
 		})
@@ -567,18 +577,18 @@ func TestUpdatePassword(t *testing.T) {
 func TestDeleteUser(t *testing.T) {
 	logger := zaptest.NewLogger(t)
 	ctx := context.Background()
-	
+
 	validUUID := uuid.New()
-	
+
 	tests := []struct {
 		name         string
-		request      *pb.DeleteUserRequest
+		request      *userpb.DeleteUserRequest
 		setupMock    func(*MockUserService)
 		expectedCode codes.Code
 	}{
 		{
 			name: "Success",
-			request: &pb.DeleteUserRequest{
+			request: &userpb.DeleteUserRequest{
 				Id: validUUID.String(),
 			},
 			setupMock: func(mockService *MockUserService) {
@@ -588,7 +598,7 @@ func TestDeleteUser(t *testing.T) {
 		},
 		{
 			name: "Invalid UUID",
-			request: &pb.DeleteUserRequest{
+			request: &userpb.DeleteUserRequest{
 				Id: "invalid-uuid",
 			},
 			setupMock: func(mockService *MockUserService) {
@@ -598,7 +608,7 @@ func TestDeleteUser(t *testing.T) {
 		},
 		{
 			name: "User Not Found",
-			request: &pb.DeleteUserRequest{
+			request: &userpb.DeleteUserRequest{
 				Id: validUUID.String(),
 			},
 			setupMock: func(mockService *MockUserService) {
@@ -608,7 +618,7 @@ func TestDeleteUser(t *testing.T) {
 		},
 		{
 			name: "Internal Error",
-			request: &pb.DeleteUserRequest{
+			request: &userpb.DeleteUserRequest{
 				Id: validUUID.String(),
 			},
 			setupMock: func(mockService *MockUserService) {
@@ -617,18 +627,18 @@ func TestDeleteUser(t *testing.T) {
 			expectedCode: codes.Internal,
 		},
 	}
-	
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			// Create a fresh handler and mock for each test to avoid interference
 			mockService := new(MockUserService)
 			handler := NewHandler(mockService, logger)
-			
+
 			// Setup the mock expectations
 			tt.setupMock(mockService)
-			
+
 			response, err := handler.DeleteUser(ctx, tt.request)
-			
+
 			if tt.expectedCode != codes.OK {
 				assert.Error(t, err)
 				st, ok := status.FromError(err)
@@ -639,10 +649,33 @@ func TestDeleteUser(t *testing.T) {
 				assert.NotNil(t, response)
 				assert.IsType(t, &emptypb.Empty{}, response)
 			}
-			
+
 			// Verify that all expected mock calls were made
 			mockService.AssertExpectations(t)
 		})
+	}
+}
+
+// toProtoUser converts a domain user to a protobuf user
+func toProtoUser(user *domainUser.User) *userpb.User {
+	var createdAt, updatedAt *timestamppb.Timestamp
+
+	if !user.CreatedAt.IsZero() {
+		createdAt = timestamppb.New(user.CreatedAt)
+	}
+
+	if !user.UpdatedAt.IsZero() {
+		updatedAt = timestamppb.New(user.UpdatedAt)
+	}
+
+	return &userpb.User{
+		Id:        user.ID.String(),
+		Email:     user.Email,
+		FirstName: user.FirstName,
+		LastName:  user.LastName,
+		IsActive:  true, // Assuming all users are active by default
+		CreatedAt: createdAt,
+		UpdatedAt: updatedAt,
 	}
 }
 

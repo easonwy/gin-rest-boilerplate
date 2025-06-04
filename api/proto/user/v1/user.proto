@@ -51,9 +51,9 @@ service UserService {
 // User message represents a user in the system
 message User {
   string id = 1;
-  string username = 2;
-  string email = 3;
-  string full_name = 4 [json_name = "full_name"];
+  string email = 2;
+  string first_name = 3 [json_name = "first_name"];
+  string last_name = 4 [json_name = "last_name"];
   bool is_active = 5 [json_name = "is_active"];
   google.protobuf.Timestamp created_at = 6 [json_name = "created_at"];
   google.protobuf.Timestamp updated_at = 7 [json_name = "updated_at"];
@@ -61,14 +61,14 @@ message User {
 
 // Requests and Responses
 message RegisterRequest {
-  string username = 1;
-  string email = 2;
-  string password = 3;
-  string full_name = 4 [json_name = "full_name"];
+  string email = 1;
+  string password = 2;
+  string first_name = 3 [json_name = "first_name"];
+  string last_name = 4 [json_name = "last_name"];
 }
 
 message LoginRequest {
-  string username = 1;
+  string email = 1;
   string password = 2;
 }
 
@@ -84,8 +84,9 @@ message GetProfileRequest {
 
 message UpdateProfileRequest {
   string id = 1;
-  string full_name = 2 [json_name = "full_name"];
-  string email = 3;
+  string first_name = 2 [json_name = "first_name"];
+  string last_name = 3 [json_name = "last_name"];
+  string email = 4;
 }
 
 message DeleteUserRequest {

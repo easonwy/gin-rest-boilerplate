@@ -14,7 +14,7 @@ type ConfigProvider interface {
 }
 
 // DefaultConfigProvider implements ConfigProvider using Viper
-type DefaultConfigProvider struct{
+type DefaultConfigProvider struct {
 	configPath string
 }
 

@@ -5,26 +5,22 @@ import (
 	"fmt"
 	"net"
 	"net/http"
+	"time"
 
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
-	"github.com/yi-tech/go-user-service/internal/domain/auth"
-	userService "github.com/yi-tech/go-user-service/internal/service/user"
-	authHandler "github.com/yi-tech/go-user-service/internal/transport/grpc/auth"
-	userHandler "github.com/yi-tech/go-user-service/internal/transport/grpc/user"
 	"go.uber.org/zap"
-	"golang.org/x/net/http2"
-	"golang.org/x/net/http2/h2c"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
-	"google.golang.org/grpc/reflection"
 
-	authpb "github.com/yi-tech/go-user-service/api/proto/auth"
-	authv1pb "github.com/yi-tech/go-user-service/api/proto/auth/v1"
-	userpb "github.com/yi-tech/go-user-service/api/proto/user"
-	userv1pb "github.com/yi-tech/go-user-service/api/proto/user/v1"
+	authpb "github.com/yi-tech/go-user-service/api/proto/auth/v1"
+	userpb "github.com/yi-tech/go-user-service/api/proto/user/v1"
+	domainAuth "github.com/yi-tech/go-user-service/internal/domain/auth"
+	serviceUser "github.com/yi-tech/go-user-service/internal/service/user"
+	grpcAuth "github.com/yi-tech/go-user-service/internal/transport/grpc/auth"
+	grpcUser "github.com/yi-tech/go-user-service/internal/transport/grpc/user"
 )
 
-// Config holds the gRPC server configuration
+// Config represents the gRPC server configuration
 type Config struct {
 	GRPCPort int
 	HTTPPort int
@@ -32,143 +28,113 @@ type Config struct {
 
 // Server represents the gRPC server
 type Server struct {
-	grpcServer *grpc.Server
-	httpServer *http.Server
-	config     *Config
+	userHandler *grpcUser.Handler
+	authHandler *grpcAuth.Handler
+	logger      *zap.Logger
+	cfg         *Config
+	server      *grpc.Server
+	httpServer  *http.Server
 }
 
 // NewServer creates a new gRPC server
-func NewServer(userService userService.UserService, authService auth.AuthService, logger *zap.Logger, config *Config) *Server {
-	// Create a gRPC server
-	grpcServer := grpc.NewServer()
-
-	// Create handlers and register the services
-	userHandler := userHandler.NewHandler(userService, logger)
-	authHandler := authHandler.NewHandler(authService, logger)
-
-	// Register the services
-	userpb.RegisterUserServiceServer(grpcServer, userHandler)
-	authpb.RegisterAuthServiceServer(grpcServer, authHandler)
-
-	// Enable reflection for gRPC CLI tools
-	reflection.Register(grpcServer)
-
-	// Create a new ServeMux for the gRPC-Gateway
-	mux := runtime.NewServeMux()
-
-	// Register the gRPC-Gateway handlers
-	// Register v1 user service gateway
-	err := userv1pb.RegisterUserServiceHandlerFromEndpoint(
-		context.Background(),
-		mux,
-		fmt.Sprintf(":%d", config.GRPCPort),
-		[]grpc.DialOption{grpc.WithTransportCredentials(insecure.NewCredentials())},
-	)
-	if err != nil {
-		logger.Error("Failed to register user v1 service gateway", zap.Error(err))
-		panic(fmt.Sprintf("failed to register user v1 service gateway: %v", err))
-	}
-
-	// Register auth v1 service gateway
-	err = authv1pb.RegisterAuthServiceHandlerFromEndpoint(
-		context.Background(),
-		mux,
-		fmt.Sprintf(":%d", config.GRPCPort),
-		[]grpc.DialOption{grpc.WithTransportCredentials(insecure.NewCredentials())},
-	)
-	if err != nil {
-		logger.Error("Failed to register auth v1 service gateway", zap.Error(err))
-		panic(fmt.Sprintf("failed to register auth v1 service gateway: %v", err))
-	}
-
+func NewServer(userService serviceUser.UserService, authService domainAuth.AuthService, logger *zap.Logger, cfg *Config) *Server {
 	return &Server{
-		grpcServer: grpcServer,
-		config:     config,
+		userHandler: grpcUser.NewHandler(userService, logger),
+		authHandler: grpcAuth.NewHandler(authService, logger),
+		logger:      logger,
+		cfg:         cfg,
 	}
 }
 
-// Start starts the gRPC server
+// Start starts the gRPC server and the HTTP gateway
 func (s *Server) Start() error {
-	// Create a listener on TCP port
-	lis, err := net.Listen("tcp", fmt.Sprintf(":%d", s.config.GRPCPort))
+	// Create a listener for the gRPC server
+	lis, err := net.Listen("tcp", fmt.Sprintf(":%d", s.cfg.GRPCPort))
 	if err != nil {
 		return fmt.Errorf("failed to listen: %v", err)
 	}
 
-	// Start gRPC server in a goroutine
+	// Create a new gRPC server
+	s.server = grpc.NewServer()
+
+	// Register services
+	authpb.RegisterAuthServiceServer(s.server, s.authHandler.GetServer())
+	userpb.RegisterUserServiceServer(s.server, s.userHandler.GetServer())
+
+	// Start the gRPC server in a goroutine
 	go func() {
-		if err := s.grpcServer.Serve(lis); err != nil {
-			panic(fmt.Sprintf("failed to serve gRPC: %v", err))
+		s.logger.Info("Starting gRPC server", zap.Int("port", s.cfg.GRPCPort))
+		if err := s.server.Serve(lis); err != nil {
+			s.logger.Error("Failed to serve gRPC", zap.Error(err))
 		}
 	}()
 
-	// Create a client connection to the gRPC server we just started
-	conn, err := grpc.DialContext(
-		context.Background(),
-		fmt.Sprintf("0.0.0.0:%d", s.config.GRPCPort),
-		grpc.WithTransportCredentials(insecure.NewCredentials()),
-	)
-	if err != nil {
-		return fmt.Errorf("failed to dial server: %v", err)
-	}
+	// Start the HTTP gateway
+	return s.startHTTPGateway()
+}
 
-	// Create a new ServeMux for the HTTP server
+// startHTTPGateway starts the HTTP gateway for the gRPC server
+func (s *Server) startHTTPGateway() error {
+	ctx := context.Background()
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
+
+	// Create a new mux for the HTTP gateway
 	mux := runtime.NewServeMux()
 
-	// Register gRPC Gateway handlers
-	if err := userv1pb.RegisterUserServiceHandler(context.Background(), mux, conn); err != nil {
-		return fmt.Errorf("failed to register user v1 service gateway: %v", err)
+	// Set up a connection to the gRPC server
+	opts := []grpc.DialOption{grpc.WithTransportCredentials(insecure.NewCredentials())}
+	grpcServerEndpoint := fmt.Sprintf("localhost:%d", s.cfg.GRPCPort)
+
+	// Register services
+	err := authpb.RegisterAuthServiceHandlerFromEndpoint(ctx, mux, grpcServerEndpoint, opts)
+	if err != nil {
+		return fmt.Errorf("failed to register auth service handler: %v", err)
 	}
 
-	// Auth v1 service gateway handler
-	if err := authv1pb.RegisterAuthServiceHandler(context.Background(), mux, conn); err != nil {
-		return fmt.Errorf("failed to register auth v1 service gateway: %v", err)
+	err = userpb.RegisterUserServiceHandlerFromEndpoint(ctx, mux, grpcServerEndpoint, opts)
+	if err != nil {
+		return fmt.Errorf("failed to register user service handler: %v", err)
 	}
 
-	// Create HTTP server with the ServeMux
+	// Create a new HTTP server for the gateway
 	s.httpServer = &http.Server{
-		Addr:    fmt.Sprintf(":%d", s.config.HTTPPort),
-		Handler: grpcHandlerFunc(s.grpcServer, mux),
+		Addr:    fmt.Sprintf(":%d", s.cfg.HTTPPort),
+		Handler: mux,
 	}
 
-	// Start HTTP server in a goroutine
+	// Start the HTTP server in a goroutine
 	go func() {
-		if err := s.httpServer.ListenAndServe(); err != http.ErrServerClosed {
-			panic(fmt.Sprintf("failed to serve HTTP: %v", err))
+		s.logger.Info("Starting HTTP gateway", zap.Int("port", s.cfg.HTTPPort))
+		if err := s.httpServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			s.logger.Error("Failed to serve HTTP gateway", zap.Error(err))
 		}
 	}()
 
 	return nil
 }
 
-// grpcHandlerFunc returns an http.Handler that delegates to grpcServer on incoming gRPC
-// connections or otherHandler otherwise.
-func grpcHandlerFunc(grpcServer *grpc.Server, otherHandler http.Handler) http.Handler {
-	return h2c.NewHandler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.ProtoMajor == 2 && r.Header.Get("Content-Type") == "application/grpc" {
-			grpcServer.ServeHTTP(w, r)
-		} else {
-			otherHandler.ServeHTTP(w, r)
-		}
-	}), &http2.Server{})
-}
-
-// Stop gracefully stops the gRPC server
-func (s *Server) Stop() error {
+// Shutdown gracefully shuts down the gRPC server and the HTTP gateway
+func (s *Server) Shutdown(ctx context.Context) error {
+	// Shutdown the HTTP gateway
 	if s.httpServer != nil {
-		if err := s.httpServer.Shutdown(context.Background()); err != nil {
-			return fmt.Errorf("failed to shutdown HTTP server: %v", err)
+		if err := s.httpServer.Shutdown(ctx); err != nil {
+			s.logger.Error("Failed to shutdown HTTP gateway", zap.Error(err))
 		}
 	}
 
-	if s.grpcServer != nil {
-		s.grpcServer.GracefulStop()
+	// Gracefully stop the gRPC server
+	if s.server != nil {
+		s.server.GracefulStop()
 	}
-
 	return nil
 }
 
-// Config returns the server configuration
-func (s *Server) Config() *Config {
-	return s.config
+// Stop gracefully shuts down the gRPC server and the HTTP gateway
+func (s *Server) Stop() error {
+	// Create a context with a timeout for graceful shutdown
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	return s.Shutdown(ctx)
 }

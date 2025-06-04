@@ -1,6 +1,13 @@
+#!/bin/bash
+
+set -e
+
+# Update user handler.go with Swagger annotations
+cat > /Users/easonwu/Dev/personal/go-user-service/internal/transport/http/user/handler.go << 'EOF'
 package user
 
 import (
+	"fmt"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -59,7 +66,7 @@ func (h *Handler) Register(c *gin.Context) {
 			response.Conflict(c, "Email already exists")
 			return
 		}
-
+		
 		// Log the actual error for debugging but return a generic message
 		h.logger.Error("Failed to register user", zap.Error(err))
 		response.InternalServerError(c, "Something went wrong. Please try again later.")
@@ -84,7 +91,7 @@ func (h *Handler) Register(c *gin.Context) {
 // @Router /users/{id} [get]
 func (h *Handler) GetUserByID(c *gin.Context) {
 	idParam := c.Param("id")
-
+	
 	// Convert string ID to UUID
 	userUUID, err := uuid.Parse(idParam)
 	if err != nil {
@@ -99,7 +106,7 @@ func (h *Handler) GetUserByID(c *gin.Context) {
 			response.NotFound(c, "User not found")
 			return
 		}
-
+		
 		// Log the actual error for debugging but return a generic message
 		h.logger.Error("Failed to get user by ID", zap.Error(err), zap.String("user_id", idParam))
 		response.InternalServerError(c, "Something went wrong. Please try again later.")
@@ -135,7 +142,7 @@ func (h *Handler) GetUserByEmail(c *gin.Context) {
 			response.NotFound(c, "User not found")
 			return
 		}
-
+		
 		// Log the actual error for debugging but return a generic message
 		h.logger.Error("Failed to get user by email", zap.Error(err), zap.String("email", email))
 		response.InternalServerError(c, "Something went wrong. Please try again later.")
@@ -160,7 +167,7 @@ func (h *Handler) GetUserByEmail(c *gin.Context) {
 // @Router /users/{id} [put]
 func (h *Handler) UpdateProfile(c *gin.Context) {
 	idParam := c.Param("id")
-
+	
 	// Convert string ID to UUID
 	userUUID, err := uuid.Parse(idParam)
 	if err != nil {
@@ -176,14 +183,14 @@ func (h *Handler) UpdateProfile(c *gin.Context) {
 	}
 
 	// Get current user data
-	_, err = h.userService.GetByID(c.Request.Context(), userUUID)
+	currentUser, err := h.userService.GetByID(c.Request.Context(), userUUID)
 	if err != nil {
 		// Handle specific error cases
 		if err.Error() == "user not found" {
 			response.NotFound(c, "User not found")
 			return
 		}
-
+		
 		// Log the actual error for debugging but return a generic message
 		h.logger.Error("Failed to get user for update", zap.Error(err), zap.String("user_id", idParam))
 		response.InternalServerError(c, "Something went wrong. Please try again later.")
@@ -192,26 +199,15 @@ func (h *Handler) UpdateProfile(c *gin.Context) {
 
 	// Apply updates (only if provided)
 	updates := domainUser.UpdateUserParams{}
-
+	
 	if req.FirstName != nil {
 		updates.FirstName = *req.FirstName
 	}
-
+	
 	if req.LastName != nil {
 		updates.LastName = *req.LastName
 	}
-
-	// Validate that required fields are provided
-	if updates.FirstName == "" {
-		response.BadRequest(c, "first name is required")
-		return
-	}
-
-	if updates.LastName == "" {
-		response.BadRequest(c, "last name is required")
-		return
-	}
-
+	
 	if req.Email != nil {
 		updates.Email = *req.Email
 	}
@@ -224,22 +220,14 @@ func (h *Handler) UpdateProfile(c *gin.Context) {
 			response.Conflict(c, "Email already in use by another account")
 			return
 		}
-
+		
 		// Log the actual error for debugging but return a generic message
 		h.logger.Error("Failed to update user", zap.Error(err), zap.String("user_id", idParam))
 		response.InternalServerError(c, "Something went wrong. Please try again later.")
 		return
 	}
 
-	// Return updated user data
-	response.Success(c, UserResponse{
-		ID:        updatedUser.ID.String(),
-		Email:     updatedUser.Email,
-		FirstName: updatedUser.FirstName,
-		LastName:  updatedUser.LastName,
-		CreatedAt: updatedUser.CreatedAt,
-		UpdatedAt: updatedUser.UpdatedAt,
-	})
+	response.Success(c, toUserResponse(updatedUser))
 }
 
 // UpdatePassword handles updating a user's password
@@ -258,7 +246,7 @@ func (h *Handler) UpdateProfile(c *gin.Context) {
 // @Router /users/{id}/password [put]
 func (h *Handler) UpdatePassword(c *gin.Context) {
 	idParam := c.Param("id")
-
+	
 	// Convert string ID to UUID
 	userUUID, err := uuid.Parse(idParam)
 	if err != nil {
@@ -309,7 +297,7 @@ func (h *Handler) UpdatePassword(c *gin.Context) {
 // @Router /users/{id} [delete]
 func (h *Handler) DeleteUser(c *gin.Context) {
 	idParam := c.Param("id")
-
+	
 	// Convert string ID to UUID
 	userUUID, err := uuid.Parse(idParam)
 	if err != nil {
@@ -318,14 +306,14 @@ func (h *Handler) DeleteUser(c *gin.Context) {
 	}
 
 	// Delete user
-	err = h.userService.DeleteUser(c.Request.Context(), userUUID)
+	err = h.userService.Delete(c.Request.Context(), userUUID)
 	if err != nil {
 		// Handle specific error cases
 		if err.Error() == "user not found" {
 			response.NotFound(c, "User not found")
 			return
 		}
-
+		
 		// Log the actual error for debugging but return a generic message
 		h.logger.Error("Failed to delete user", zap.Error(err), zap.String("user_id", idParam))
 		response.InternalServerError(c, "Something went wrong. Please try again later.")
@@ -346,41 +334,169 @@ func toUserResponse(user *domainUser.User) UserResponse {
 		UpdatedAt: user.UpdatedAt,
 	}
 }
+EOF
 
-// GetProfile handles retrieving the current user's profile
-// @Summary Get current user profile
-// @Description Retrieve the current user's profile information
-// @Tags profile
+# Update auth handler.go with Swagger annotations
+cat > /Users/easonwu/Dev/personal/go-user-service/internal/transport/http/auth/handler.go << 'EOF'
+package auth
+
+import (
+	"fmt"
+
+	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
+	"go.uber.org/zap"
+
+	domainAuth "github.com/yi-tech/go-user-service/internal/domain/auth"
+	"github.com/yi-tech/go-user-service/internal/transport/http/response"
+)
+
+// Handler handles HTTP requests for authentication operations
+type Handler struct {
+	authService domainAuth.AuthService
+	logger      *zap.Logger
+}
+
+// NewHandler creates a new authentication handler
+func NewHandler(authService domainAuth.AuthService, logger *zap.Logger) *Handler {
+	return &Handler{
+		authService: authService,
+		logger:      logger,
+	}
+}
+
+// Login handles user login
+// @Summary User login
+// @Description Authenticate a user and return access and refresh tokens
+// @Tags auth
 // @Accept json
 // @Produce json
-// @Success 200 {object} response.Response{data=UserResponse} "User profile information"
-// @Failure 401 {object} response.Response "Unauthorized"
+// @Param request body LoginRequest true "Login credentials"
+// @Success 200 {object} response.Response{data=LoginResponse} "Successfully authenticated"
+// @Failure 400 {object} response.Response "Invalid request data"
+// @Failure 401 {object} response.Response "Invalid email or password"
 // @Failure 500 {object} response.Response "Internal server error"
-// @Router /profile [get]
-func (h *Handler) GetProfile(c *gin.Context) {
-	// Get user ID from context (set by auth middleware)
-	userID, exists := c.Get("userID")
-	if !exists {
-		response.Unauthorized(c, "User not authenticated")
+// @Router /auth/login [post]
+func (h *Handler) Login(c *gin.Context) {
+	var req LoginRequest // Use local DTO
+	if err := c.ShouldBindJSON(&req); err != nil {
+		h.logger.Warn("Invalid login request", zap.Error(err))
+		response.BadRequest(c, "Invalid request data")
 		return
 	}
 
-	// Convert to UUID
-	userUUID, ok := userID.(uuid.UUID)
-	if !ok {
-		h.logger.Error("Failed to convert userID to UUID")
-		response.InternalServerError(c, "Something went wrong. Please try again later.")
-		return
-	}
-
-	// Get user data
-	user, err := h.userService.GetByID(c.Request.Context(), userUUID)
+	// Authenticate user
+	tokenPair, err := h.authService.Login(c.Request.Context(), req.Email, req.Password)
 	if err != nil {
-		// Log the actual error for debugging but return a generic message
-		h.logger.Error("Failed to get user profile", zap.Error(err), zap.String("user_id", userUUID.String()))
+		h.logger.Info("Login attempt failed", zap.Error(err), zap.String("email", req.Email))
+		
+		// Handle specific error cases with user-friendly messages
+		if err.Error() == "invalid credentials" {
+			response.Unauthorized(c, "Invalid email or password")
+			return
+		}
+		
+		// Log the actual error for debugging but return a generic message to the user
+		h.logger.Error("Login error", zap.Error(err), zap.String("email", req.Email))
 		response.InternalServerError(c, "Something went wrong. Please try again later.")
 		return
 	}
 
-	response.Success(c, toUserResponse(user))
+	// Create response data
+	loginData := LoginResponse{
+		AccessToken:  tokenPair.AccessToken,
+		RefreshToken: tokenPair.RefreshToken,
+		ExpiresIn:    3600, // Placeholder for access token lifetime (e.g., 1 hour)
+	}
+	
+	response.Success(c, loginData)
 }
+
+// RefreshToken handles refreshing an access token
+// @Summary Refresh access token
+// @Description Refresh an access token using a valid refresh token
+// @Tags auth
+// @Accept json
+// @Produce json
+// @Param request body RefreshTokenRequest true "Refresh token"
+// @Success 200 {object} response.Response{data=LoginResponse} "Token refreshed successfully"
+// @Failure 400 {object} response.Response "Invalid request data"
+// @Failure 401 {object} response.Response "Invalid or expired refresh token"
+// @Failure 500 {object} response.Response "Internal server error"
+// @Router /auth/refresh [post]
+func (h *Handler) RefreshToken(c *gin.Context) {
+	var req RefreshTokenRequest // Use local DTO
+	if err := c.ShouldBindJSON(&req); err != nil {
+		h.logger.Warn("Invalid refresh token request", zap.Error(err))
+		response.BadRequest(c, "Invalid request data")
+		return
+	}
+
+	// Refresh token
+	tokenPair, err := h.authService.RefreshToken(c.Request.Context(), req.RefreshToken)
+	if err != nil {
+		// Handle specific error cases
+		if err.Error() == "invalid or expired refresh token" {
+			response.Unauthorized(c, "Invalid or expired refresh token")
+			return
+		}
+		
+		// Log the actual error for debugging but return a generic message
+		h.logger.Error("Failed to refresh token", zap.Error(err))
+		response.InternalServerError(c, "Something went wrong. Please try again later.")
+		return
+	}
+
+	// Create response data
+	responseData := LoginResponse{
+		AccessToken:  tokenPair.AccessToken,
+		RefreshToken: tokenPair.RefreshToken,
+		ExpiresIn:    3600, // Placeholder for access token lifetime
+	}
+	
+	response.Success(c, responseData)
+}
+
+// Logout handles user logout
+// @Summary User logout
+// @Description Invalidate the user's refresh token
+// @Tags auth
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Success 200 {object} response.Response "Logged out successfully"
+// @Failure 401 {object} response.Response "Authentication required"
+// @Failure 500 {object} response.Response "Internal server error"
+// @Router /auth/logout [post]
+func (h *Handler) Logout(c *gin.Context) {
+	// Get user ID from context (assuming it's set by auth middleware)
+	userID, exists := c.Get("user_id")
+	if !exists {
+		response.Unauthorized(c, "Authentication required")
+		return
+	}
+
+	// Assert userID to uuid.UUID
+	userIDUUID, ok := userID.(uuid.UUID)
+	if !ok {
+		h.logger.Error("Failed to assert user ID to uuid.UUID", zap.Any("user_id_type", fmt.Sprintf("%T", userID)), zap.Any("user_id_value", userID))
+		response.InternalServerError(c, "Something went wrong. Please try again later.")
+		return
+	}
+
+	// Logout user
+	err := h.authService.Logout(c.Request.Context(), userIDUUID)
+	if err != nil {
+		h.logger.Error("Failed to logout user", zap.Error(err), zap.String("user_id", userIDUUID.String()))
+		response.InternalServerError(c, "Something went wrong. Please try again later.")
+		return
+	}
+
+	response.Success(c, gin.H{"message": "Logged out successfully"})
+}
+EOF
+
+# Make the script executable
+chmod +x "$0"
+
+echo "Swagger annotations added to handler files."

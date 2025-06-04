@@ -54,7 +54,7 @@ func SetupRouter(
 			// User routes
 			userGroup := protected.Group("/users")
 			{
-				userGroup.PUT("/:id", userHandler.UpdateUser)
+				userGroup.PUT("/:id", userHandler.UpdateProfile)
 				userGroup.PATCH("/:id/password", userHandler.UpdatePassword)
 				userGroup.DELETE("/:id", userHandler.DeleteUser)
 			}
@@ -62,7 +62,7 @@ func SetupRouter(
 			// Profile routes
 			profileGroup := protected.Group("/profile")
 			{
-				profileGroup.GET("", userHandler.GetProfile)
+				profileGroup.GET("", userHandler.GetUserByID) // Temporarily use GetUserByID until GetProfile is implemented
 				profileGroup.PUT("", userHandler.UpdateProfile)
 			}
 		}
@@ -77,12 +77,12 @@ func NewRouter(
 	logger *zap.Logger,
 ) *gin.Engine {
 	router := gin.New()
-	
+
 	// Use middleware
 	router.Use(gin.Recovery())
-	
+
 	// Setup routes
 	SetupRouter(router, userHandler, authHandler, authService, logger)
-	
+
 	return router
 }

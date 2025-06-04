@@ -8,8 +8,8 @@ import (
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
+	authpb "github.com/yi-tech/go-user-service/api/proto/auth/v1"
 	domainAuth "github.com/yi-tech/go-user-service/internal/domain/auth" // Alias for domain auth types
-	pb "github.com/yi-tech/go-user-service/api/proto/auth"
 	"go.uber.org/zap/zaptest"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
@@ -63,9 +63,9 @@ func createMockDomainTokenPair() *domainAuth.TokenPair {
 func TestNewHandler(t *testing.T) {
 	mockService := new(MockAuthService)
 	logger := zaptest.NewLogger(t)
-	
+
 	handler := NewHandler(mockService, logger)
-	
+
 	assert.NotNil(t, handler)
 	assert.Equal(t, mockService, handler.authService)
 	assert.Equal(t, logger, handler.logger)
@@ -74,17 +74,17 @@ func TestNewHandler(t *testing.T) {
 func TestLogin(t *testing.T) {
 	logger := zaptest.NewLogger(t)
 	ctx := context.Background()
-	
+
 	tests := []struct {
 		name          string
-		request       *pb.LoginRequest
+		request       *authpb.LoginRequest
 		setupMock     func(*MockAuthService)
 		expectedCode  codes.Code
-		checkResponse func(*pb.TokenResponse)
+		checkResponse func(*authpb.TokenResponse)
 	}{
 		{
 			name: "Success",
-			request: &pb.LoginRequest{
+			request: &authpb.LoginRequest{
 				Email:    "test@example.com",
 				Password: "password123",
 			},
@@ -93,14 +93,14 @@ func TestLogin(t *testing.T) {
 				mockService.On("Login", mock.Anything, "test@example.com", "password123").Return(mockTokenPair, nil)
 			},
 			expectedCode: codes.OK,
-			checkResponse: func(response *pb.TokenResponse) {
+			checkResponse: func(response *authpb.TokenResponse) {
 				assert.Equal(t, "mock-access-token", response.AccessToken)
 				assert.Equal(t, "mock-refresh-token", response.RefreshToken)
 			},
 		},
 		{
 			name: "Missing Email",
-			request: &pb.LoginRequest{
+			request: &authpb.LoginRequest{
 				Email:    "",
 				Password: "password123",
 			},
@@ -111,7 +111,7 @@ func TestLogin(t *testing.T) {
 		},
 		{
 			name: "Missing Password",
-			request: &pb.LoginRequest{
+			request: &authpb.LoginRequest{
 				Email:    "test@example.com",
 				Password: "",
 			},
@@ -122,7 +122,7 @@ func TestLogin(t *testing.T) {
 		},
 		{
 			name: "Invalid Credentials",
-			request: &pb.LoginRequest{
+			request: &authpb.LoginRequest{
 				Email:    "test@example.com",
 				Password: "wrongpassword",
 			},
@@ -133,7 +133,7 @@ func TestLogin(t *testing.T) {
 		},
 		{
 			name: "Internal Error",
-			request: &pb.LoginRequest{
+			request: &authpb.LoginRequest{
 				Email:    "test@example.com",
 				Password: "password123",
 			},
@@ -143,18 +143,18 @@ func TestLogin(t *testing.T) {
 			expectedCode: codes.Internal,
 		},
 	}
-	
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			// Create a fresh handler and mock for each test to avoid interference
 			mockService := new(MockAuthService)
 			handler := NewHandler(mockService, logger)
-			
+
 			// Setup the mock expectations
 			tt.setupMock(mockService)
-			
+
 			response, err := handler.Login(ctx, tt.request)
-			
+
 			if tt.expectedCode != codes.OK {
 				assert.Error(t, err)
 				st, ok := status.FromError(err)
@@ -165,7 +165,7 @@ func TestLogin(t *testing.T) {
 				assert.NotNil(t, response)
 				tt.checkResponse(response)
 			}
-			
+
 			// Verify that all expected mock calls were made
 			mockService.AssertExpectations(t)
 		})
@@ -175,17 +175,17 @@ func TestLogin(t *testing.T) {
 func TestRefreshToken(t *testing.T) {
 	logger := zaptest.NewLogger(t)
 	ctx := context.Background()
-	
+
 	tests := []struct {
 		name          string
-		request       *pb.RefreshTokenRequest
+		request       *authpb.RefreshTokenRequest
 		setupMock     func(*MockAuthService)
 		expectedCode  codes.Code
-		checkResponse func(*pb.TokenResponse)
+		checkResponse func(*authpb.TokenResponse)
 	}{
 		{
 			name: "Success",
-			request: &pb.RefreshTokenRequest{
+			request: &authpb.RefreshTokenRequest{
 				RefreshToken: "valid-refresh-token",
 			},
 			setupMock: func(mockService *MockAuthService) {
@@ -193,14 +193,14 @@ func TestRefreshToken(t *testing.T) {
 				mockService.On("RefreshToken", mock.Anything, "valid-refresh-token").Return(mockTokenPair, nil)
 			},
 			expectedCode: codes.OK,
-			checkResponse: func(response *pb.TokenResponse) {
+			checkResponse: func(response *authpb.TokenResponse) {
 				assert.Equal(t, "mock-access-token", response.AccessToken)
 				assert.Equal(t, "mock-refresh-token", response.RefreshToken)
 			},
 		},
 		{
 			name: "Missing Refresh Token",
-			request: &pb.RefreshTokenRequest{
+			request: &authpb.RefreshTokenRequest{
 				RefreshToken: "",
 			},
 			setupMock: func(mockService *MockAuthService) {
@@ -210,7 +210,7 @@ func TestRefreshToken(t *testing.T) {
 		},
 		{
 			name: "Invalid Token",
-			request: &pb.RefreshTokenRequest{
+			request: &authpb.RefreshTokenRequest{
 				RefreshToken: "invalid-token",
 			},
 			setupMock: func(mockService *MockAuthService) {
@@ -220,7 +220,7 @@ func TestRefreshToken(t *testing.T) {
 		},
 		{
 			name: "Session Not Found",
-			request: &pb.RefreshTokenRequest{
+			request: &authpb.RefreshTokenRequest{
 				RefreshToken: "expired-token",
 			},
 			setupMock: func(mockService *MockAuthService) {
@@ -230,7 +230,7 @@ func TestRefreshToken(t *testing.T) {
 		},
 		{
 			name: "Internal Error",
-			request: &pb.RefreshTokenRequest{
+			request: &authpb.RefreshTokenRequest{
 				RefreshToken: "valid-refresh-token",
 			},
 			setupMock: func(mockService *MockAuthService) {
@@ -239,18 +239,18 @@ func TestRefreshToken(t *testing.T) {
 			expectedCode: codes.Internal,
 		},
 	}
-	
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			// Create a fresh handler and mock for each test to avoid interference
 			mockService := new(MockAuthService)
 			handler := NewHandler(mockService, logger)
-			
+
 			// Setup the mock expectations
 			tt.setupMock(mockService)
-			
+
 			response, err := handler.RefreshToken(ctx, tt.request)
-			
+
 			if tt.expectedCode != codes.OK {
 				assert.Error(t, err)
 				st, ok := status.FromError(err)
@@ -261,7 +261,7 @@ func TestRefreshToken(t *testing.T) {
 				assert.NotNil(t, response)
 				tt.checkResponse(response)
 			}
-			
+
 			// Verify that all expected mock calls were made
 			mockService.AssertExpectations(t)
 		})
@@ -270,22 +270,22 @@ func TestRefreshToken(t *testing.T) {
 
 func TestLogout(t *testing.T) {
 	logger := zaptest.NewLogger(t)
-	
+
 	// Create a context with user ID metadata
 	userID, _ := uuid.Parse("00000000-0000-0000-0000-000000000123")
 	md := metadata.New(map[string]string{"user-id": userID.String()})
 	ctx := metadata.NewIncomingContext(context.Background(), md)
-	
+
 	tests := []struct {
 		name         string
-		request      *pb.LogoutRequest
+		request      *authpb.LogoutRequest
 		setupContext func() context.Context
 		setupMock    func(*MockAuthService)
 		expectedCode codes.Code
 	}{
 		{
 			name: "Success",
-			request: &pb.LogoutRequest{
+			request: &authpb.LogoutRequest{
 				RefreshToken: "valid-refresh-token",
 			},
 			setupContext: func() context.Context {
@@ -298,7 +298,7 @@ func TestLogout(t *testing.T) {
 		},
 		{
 			name: "Missing Refresh Token",
-			request: &pb.LogoutRequest{
+			request: &authpb.LogoutRequest{
 				RefreshToken: "",
 			},
 			setupContext: func() context.Context {
@@ -311,7 +311,7 @@ func TestLogout(t *testing.T) {
 		},
 		{
 			name: "No User ID in Context",
-			request: &pb.LogoutRequest{
+			request: &authpb.LogoutRequest{
 				RefreshToken: "valid-refresh-token",
 			},
 			setupContext: func() context.Context {
@@ -324,7 +324,7 @@ func TestLogout(t *testing.T) {
 		},
 		{
 			name: "Invalid User ID Format",
-			request: &pb.LogoutRequest{
+			request: &authpb.LogoutRequest{
 				RefreshToken: "valid-refresh-token",
 			},
 			setupContext: func() context.Context {
@@ -338,7 +338,7 @@ func TestLogout(t *testing.T) {
 		},
 		{
 			name: "Session Not Found",
-			request: &pb.LogoutRequest{
+			request: &authpb.LogoutRequest{
 				RefreshToken: "valid-refresh-token",
 			},
 			setupContext: func() context.Context {
@@ -351,7 +351,7 @@ func TestLogout(t *testing.T) {
 		},
 		{
 			name: "Internal Error",
-			request: &pb.LogoutRequest{
+			request: &authpb.LogoutRequest{
 				RefreshToken: "valid-refresh-token",
 			},
 			setupContext: func() context.Context {
@@ -363,19 +363,19 @@ func TestLogout(t *testing.T) {
 			expectedCode: codes.Internal,
 		},
 	}
-	
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			// Create a fresh handler and mock for each test to avoid interference
 			mockService := new(MockAuthService)
 			handler := NewHandler(mockService, logger)
-			
+
 			// Setup the context and mock expectations
 			testCtx := tt.setupContext()
 			tt.setupMock(mockService)
-			
+
 			response, err := handler.Logout(testCtx, tt.request)
-			
+
 			if tt.expectedCode != codes.OK {
 				assert.Error(t, err)
 				st, ok := status.FromError(err)
@@ -386,7 +386,7 @@ func TestLogout(t *testing.T) {
 				assert.NotNil(t, response)
 				assert.IsType(t, &emptypb.Empty{}, response)
 			}
-			
+
 			// Verify that all expected mock calls were made
 			mockService.AssertExpectations(t)
 		})
@@ -396,17 +396,17 @@ func TestLogout(t *testing.T) {
 func TestValidateToken(t *testing.T) {
 	logger := zaptest.NewLogger(t)
 	ctx := context.Background()
-	
+
 	tests := []struct {
 		name          string
-		request       *pb.ValidateTokenRequest
+		request       *authpb.ValidateTokenRequest
 		setupMock     func(*MockAuthService)
 		expectedCode  codes.Code
-		checkResponse func(*pb.ValidateTokenResponse)
+		checkResponse func(*authpb.ValidateTokenResponse)
 	}{
 		{
 			name: "Success",
-			request: &pb.ValidateTokenRequest{
+			request: &authpb.ValidateTokenRequest{
 				AccessToken: "valid-access-token",
 			},
 			setupMock: func(mockService *MockAuthService) {
@@ -414,13 +414,13 @@ func TestValidateToken(t *testing.T) {
 				mockService.On("ValidateToken", mock.Anything, "valid-access-token").Return(userID, nil)
 			},
 			expectedCode: codes.OK,
-			checkResponse: func(response *pb.ValidateTokenResponse) {
+			checkResponse: func(response *authpb.ValidateTokenResponse) {
 				assert.Equal(t, "00000000-0000-0000-0000-000000000123", response.UserId)
 			},
 		},
 		{
 			name: "Missing Access Token",
-			request: &pb.ValidateTokenRequest{
+			request: &authpb.ValidateTokenRequest{
 				AccessToken: "",
 			},
 			setupMock: func(mockService *MockAuthService) {
@@ -430,7 +430,7 @@ func TestValidateToken(t *testing.T) {
 		},
 		{
 			name: "Invalid Token",
-			request: &pb.ValidateTokenRequest{
+			request: &authpb.ValidateTokenRequest{
 				AccessToken: "invalid-token",
 			},
 			setupMock: func(mockService *MockAuthService) {
@@ -440,7 +440,7 @@ func TestValidateToken(t *testing.T) {
 		},
 		{
 			name: "Internal Error",
-			request: &pb.ValidateTokenRequest{
+			request: &authpb.ValidateTokenRequest{
 				AccessToken: "valid-access-token",
 			},
 			setupMock: func(mockService *MockAuthService) {
@@ -449,18 +449,18 @@ func TestValidateToken(t *testing.T) {
 			expectedCode: codes.Internal,
 		},
 	}
-	
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			// Create a fresh handler and mock for each test to avoid interference
 			mockService := new(MockAuthService)
 			handler := NewHandler(mockService, logger)
-			
+
 			// Setup the mock expectations
 			tt.setupMock(mockService)
-			
+
 			response, err := handler.ValidateToken(ctx, tt.request)
-			
+
 			if tt.expectedCode != codes.OK {
 				assert.Error(t, err)
 				st, ok := status.FromError(err)
@@ -471,7 +471,7 @@ func TestValidateToken(t *testing.T) {
 				assert.NotNil(t, response)
 				tt.checkResponse(response)
 			}
-			
+
 			// Verify that all expected mock calls were made
 			mockService.AssertExpectations(t)
 		})

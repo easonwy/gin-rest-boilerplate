@@ -5,7 +5,7 @@ package auth;
 option go_package = "github.com/yi-tech/go-user-service/api/proto/auth";
 
 import "google/protobuf/empty.proto";
-import "api/proto/user/user.proto";
+import "user/user.proto";
 
 // AuthService provides authentication operations
 service AuthService {

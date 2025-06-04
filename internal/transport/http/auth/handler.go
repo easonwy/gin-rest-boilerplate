@@ -26,6 +26,17 @@ func NewHandler(authService domainAuth.AuthService, logger *zap.Logger) *Handler
 }
 
 // Login handles user login
+// @Summary User login
+// @Description Authenticate a user and return access and refresh tokens
+// @Tags auth
+// @Accept json
+// @Produce json
+// @Param request body LoginRequest true "Login credentials"
+// @Success 200 {object} response.Response{data=LoginResponse} "Successfully authenticated"
+// @Failure 400 {object} response.Response "Invalid request data"
+// @Failure 401 {object} response.Response "Invalid email or password"
+// @Failure 500 {object} response.Response "Internal server error"
+// @Router /auth/login [post]
 func (h *Handler) Login(c *gin.Context) {
 	var req LoginRequest // Use local DTO
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -38,13 +49,13 @@ func (h *Handler) Login(c *gin.Context) {
 	tokenPair, err := h.authService.Login(c.Request.Context(), req.Email, req.Password)
 	if err != nil {
 		h.logger.Info("Login attempt failed", zap.Error(err), zap.String("email", req.Email))
-		
+
 		// Handle specific error cases with user-friendly messages
 		if err.Error() == "invalid credentials" {
 			response.Unauthorized(c, "Invalid email or password")
 			return
 		}
-		
+
 		// Log the actual error for debugging but return a generic message to the user
 		h.logger.Error("Login error", zap.Error(err), zap.String("email", req.Email))
 		response.InternalServerError(c, "Something went wrong. Please try again later.")
@@ -57,11 +68,22 @@ func (h *Handler) Login(c *gin.Context) {
 		RefreshToken: tokenPair.RefreshToken,
 		ExpiresIn:    3600, // Placeholder for access token lifetime (e.g., 1 hour)
 	}
-	
+
 	response.Success(c, loginData)
 }
 
 // RefreshToken handles refreshing an access token
+// @Summary Refresh access token
+// @Description Refresh an access token using a valid refresh token
+// @Tags auth
+// @Accept json
+// @Produce json
+// @Param request body RefreshTokenRequest true "Refresh token"
+// @Success 200 {object} response.Response{data=LoginResponse} "Token refreshed successfully"
+// @Failure 400 {object} response.Response "Invalid request data"
+// @Failure 401 {object} response.Response "Invalid or expired refresh token"
+// @Failure 500 {object} response.Response "Internal server error"
+// @Router /auth/refresh [post]
 func (h *Handler) RefreshToken(c *gin.Context) {
 	var req RefreshTokenRequest // Use local DTO
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -78,7 +100,7 @@ func (h *Handler) RefreshToken(c *gin.Context) {
 			response.Unauthorized(c, "Invalid or expired refresh token")
 			return
 		}
-		
+
 		// Log the actual error for debugging but return a generic message
 		h.logger.Error("Failed to refresh token", zap.Error(err))
 		response.InternalServerError(c, "Something went wrong. Please try again later.")
@@ -91,11 +113,21 @@ func (h *Handler) RefreshToken(c *gin.Context) {
 		RefreshToken: tokenPair.RefreshToken,
 		ExpiresIn:    3600, // Placeholder for access token lifetime
 	}
-	
+
 	response.Success(c, responseData)
 }
 
 // Logout handles user logout
+// @Summary User logout
+// @Description Invalidate the user's refresh token
+// @Tags auth
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Success 200 {object} response.Response "Logged out successfully"
+// @Failure 401 {object} response.Response "Authentication required"
+// @Failure 500 {object} response.Response "Internal server error"
+// @Router /auth/logout [post]
 func (h *Handler) Logout(c *gin.Context) {
 	// Get user ID from context (assuming it's set by auth middleware)
 	userID, exists := c.Get("user_id")
