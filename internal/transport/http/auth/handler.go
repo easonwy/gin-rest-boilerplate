@@ -51,8 +51,14 @@ func (h *Handler) Login(c *gin.Context) {
 		return
 	}
 
+	// Create domainAuth.LoginInput from the request
+	loginInput := domainAuth.LoginInput{
+		Email:    req.Email,
+		Password: req.Password,
+	}
+
 	// Authenticate user
-	tokenPair, err := h.authService.Login(c.Request.Context(), req.Email, req.Password)
+	tokenPair, err := h.authService.Login(c.Request.Context(), loginInput)
 	if err != nil {
 		if errors.Is(err, serviceAuth.ErrInvalidCredentials) {
 			h.logger.Info("Login attempt failed: invalid credentials", // This log is fine

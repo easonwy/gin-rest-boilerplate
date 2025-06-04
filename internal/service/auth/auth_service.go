@@ -36,9 +36,9 @@ func NewService(userService domainUser.UserService, authRepo domainAuth.AuthRepo
 }
 
 // Login handles user authentication and token generation
-func (s *Service) Login(ctx context.Context, email, password string) (*domainAuth.TokenPair, error) {
+func (s *Service) Login(ctx context.Context, input domainAuth.LoginInput) (*domainAuth.TokenPair, error) {
 	// Find user by email
-	user, err := s.userService.GetByEmail(ctx, email)
+	user, err := s.userService.GetByEmail(ctx, input.Email)
 	if err != nil {
 		if errors.Is(err, userService.ErrUserNotFound) {
 			return nil, ErrInvalidCredentials // User not found by email
@@ -53,7 +53,7 @@ func (s *Service) Login(ctx context.Context, email, password string) (*domainAut
 	}
 
 	// Verify password
-	if !user.CheckPassword(password) {
+	if !user.CheckPassword(input.Password) {
 		return nil, ErrInvalidCredentials // Password incorrect
 	}
 
@@ -94,11 +94,11 @@ func (s *Service) Login(ctx context.Context, email, password string) (*domainAut
 func (s *Service) RefreshToken(ctx context.Context, refreshToken string) (*domainAuth.TokenPair, error) {
 	// Get user ID from the refresh token
 	userID, err := s.authRepo.GetUserIDByRefreshToken(ctx, refreshToken) // userID is now uuid.UUID
-	if err != nil {
-		if errors.Is(err, redis.Nil) {
-			return nil, ErrInvalidOrExpiredToken
-		}
+	if err != nil { // This catches actual errors from Redis communication, parsing, etc.
 		return nil, fmt.Errorf("failed to get user ID from refresh token: %w", err)
+	}
+	if userID == uuid.Nil { // This indicates the token was not found in Redis (repo returned (uuid.Nil, nil))
+		return nil, ErrInvalidOrExpiredToken
 	}
 
 	// Get user details

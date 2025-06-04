@@ -41,8 +41,16 @@ func (h *Handler) Register(ctx context.Context, req *userpb.RegisterRequest) (*u
 		return nil, status.Error(codes.InvalidArgument, "Email, password, and first name are required")
 	}
 
+	// Populate RegisterUserInput
+	userInput := serviceUser.RegisterUserInput{
+		Email:     req.Email,
+		Password:  req.Password,
+		FirstName: req.FirstName,
+		LastName:  req.LastName,
+	}
+
 	// Call the user service to register the user
-	user, err := h.userService.Register(ctx, req.Email, req.Password, req.FirstName, req.LastName)
+	user, err := h.userService.Register(ctx, userInput)
 	if err != nil {
 		// Check for specific error types
 		if errors.Is(err, errors.New("user already exists")) || err.Error() == "user already exists" {
@@ -154,8 +162,14 @@ func (h *Handler) UpdateUser(ctx context.Context, req *UpdateUserRequest) (*user
 		return nil, status.Error(codes.InvalidArgument, "First name is required")
 	}
 
+	// Create UpdateUserParams
+	params := domainUser.UpdateUserParams{
+		FirstName: req.GetFirstName(),
+		LastName:  req.GetLastName(),
+	}
+
 	// Update user in service
-	user, err := h.userService.UpdateUser(ctx, userID, req.GetFirstName(), req.GetLastName())
+	user, err := h.userService.Update(ctx, userID, params)
 	if err != nil {
 		// Check for specific error types
 		if errors.Is(err, errors.New("user not found")) || err.Error() == "user not found" {
