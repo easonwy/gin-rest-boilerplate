@@ -1,30 +1,25 @@
 package user
 
 import (
+	"errors" // Added for errors.Is
 	"net/http"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	domainUser "github.com/yi-tech/go-user-service/internal/domain/user"
-	serviceUser "github.com/yi-tech/go-user-service/internal/service/user"
+	realServiceUser "github.com/yi-tech/go-user-service/internal/service/user" // Renamed to avoid conflict with package name 'user'
 	"github.com/yi-tech/go-user-service/internal/transport/http/response"
 	"go.uber.org/zap"
 )
 
-// UpdateRequest represents the request body for updating a user (kept inline for now)
-type UpdateRequest struct {
-	FirstName string `json:"first_name" binding:"required"`
-	LastName  string `json:"last_name" binding:"required"`
-}
-
 // Handler handles HTTP requests for user operations
 type Handler struct {
-	userService serviceUser.UserService
+	userService realServiceUser.UserService // Use the new alias
 	logger      *zap.Logger
 }
 
 // NewHandler creates a new user handler
-func NewHandler(userService serviceUser.UserService, logger *zap.Logger) *Handler {
+func NewHandler(userService realServiceUser.UserService, logger *zap.Logger) *Handler {
 	return &Handler{
 		userService: userService,
 		logger:      logger,
@@ -46,7 +41,9 @@ func NewHandler(userService serviceUser.UserService, logger *zap.Logger) *Handle
 func (h *Handler) Register(c *gin.Context) {
 	var req UserRegisterRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		h.logger.Warn("Invalid register request", zap.Error(err))
+		h.logger.Warn("Invalid register request",
+			zap.String("operation", "Register"),
+			zap.Error(err))
 		response.BadRequest(c, "Invalid request data")
 		return
 	}
@@ -54,14 +51,15 @@ func (h *Handler) Register(c *gin.Context) {
 	// Call domain service with direct parameters
 	newUser, err := h.userService.Register(c.Request.Context(), req.Email, req.Password, req.FirstName, req.LastName)
 	if err != nil {
-		// Handle specific error cases
-		if err.Error() == "user already exists" {
-			response.Conflict(c, "Email already exists")
+		if errors.Is(err, realServiceUser.ErrUserAlreadyExists) {
+			// No need to log ErrUserAlreadyExists as error, it's a known business logic case
+			response.Conflict(c, realServiceUser.ErrUserAlreadyExists.Error())
 			return
 		}
-
-		// Log the actual error for debugging but return a generic message
-		h.logger.Error("Failed to register user", zap.Error(err))
+		h.logger.Error("Failed to register user",
+			zap.String("operation", "Register"),
+			zap.Error(err),
+			zap.String("email", req.Email)) // Add email for context
 		response.InternalServerError(c, "Something went wrong. Please try again later.")
 		return
 	}
@@ -94,14 +92,15 @@ func (h *Handler) GetUserByID(c *gin.Context) {
 
 	user, err := h.userService.GetByID(c.Request.Context(), userUUID)
 	if err != nil {
-		// Handle specific error cases
-		if err.Error() == "user not found" {
-			response.NotFound(c, "User not found")
+		if errors.Is(err, realServiceUser.ErrUserNotFound) {
+			response.NotFound(c, realServiceUser.ErrUserNotFound.Error())
 			return
 		}
-
 		// Log the actual error for debugging but return a generic message
-		h.logger.Error("Failed to get user by ID", zap.Error(err), zap.String("user_id", idParam))
+		h.logger.Error("Failed to get user by ID",
+			zap.String("operation", "GetUserByID"),
+			zap.Error(err),
+			zap.String("user_id", idParam))
 		response.InternalServerError(c, "Something went wrong. Please try again later.")
 		return
 	}
@@ -130,14 +129,15 @@ func (h *Handler) GetUserByEmail(c *gin.Context) {
 
 	user, err := h.userService.GetByEmail(c.Request.Context(), email)
 	if err != nil {
-		// Handle specific error cases
-		if err.Error() == "user not found" {
-			response.NotFound(c, "User not found")
+		if errors.Is(err, realServiceUser.ErrUserNotFound) {
+			response.NotFound(c, realServiceUser.ErrUserNotFound.Error())
 			return
 		}
-
 		// Log the actual error for debugging but return a generic message
-		h.logger.Error("Failed to get user by email", zap.Error(err), zap.String("email", email))
+		h.logger.Error("Failed to get user by email",
+			zap.String("operation", "GetUserByEmail"),
+			zap.Error(err),
+			zap.String("email", email))
 		response.InternalServerError(c, "Something went wrong. Please try again later.")
 		return
 	}
@@ -170,22 +170,26 @@ func (h *Handler) UpdateProfile(c *gin.Context) {
 
 	var req UserUpdateRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		h.logger.Warn("Invalid update request", zap.Error(err))
+		h.logger.Warn("Invalid update profile request",
+			zap.String("operation", "UpdateProfile"),
+			zap.Error(err),
+			zap.String("user_id", idParam))
 		response.BadRequest(c, "Invalid request data")
 		return
 	}
 
 	// Get current user data
-	_, err = h.userService.GetByID(c.Request.Context(), userUUID)
+	_, err = h.userService.GetByID(c.Request.Context(), userUUID) // Check if user exists before update
 	if err != nil {
-		// Handle specific error cases
-		if err.Error() == "user not found" {
-			response.NotFound(c, "User not found")
+		if errors.Is(err, realServiceUser.ErrUserNotFound) {
+			response.NotFound(c, realServiceUser.ErrUserNotFound.Error())
 			return
 		}
-
 		// Log the actual error for debugging but return a generic message
-		h.logger.Error("Failed to get user for update", zap.Error(err), zap.String("user_id", idParam))
+		h.logger.Error("Failed to get user for update",
+			zap.String("operation", "UpdateProfile"),
+			zap.Error(err),
+			zap.String("user_id", idParam))
 		response.InternalServerError(c, "Something went wrong. Please try again later.")
 		return
 	}
@@ -201,17 +205,6 @@ func (h *Handler) UpdateProfile(c *gin.Context) {
 		updates.LastName = *req.LastName
 	}
 
-	// Validate that required fields are provided
-	if updates.FirstName == "" {
-		response.BadRequest(c, "first name is required")
-		return
-	}
-
-	if updates.LastName == "" {
-		response.BadRequest(c, "last name is required")
-		return
-	}
-
 	if req.Email != nil {
 		updates.Email = *req.Email
 	}
@@ -219,14 +212,19 @@ func (h *Handler) UpdateProfile(c *gin.Context) {
 	// Update user
 	updatedUser, err := h.userService.Update(c.Request.Context(), userUUID, updates)
 	if err != nil {
-		// Handle specific error cases
-		if err.Error() == "email already in use" {
-			response.Conflict(c, "Email already in use by another account")
+		if errors.Is(err, realServiceUser.ErrUserNotFound) { // Should ideally not happen if GetByID above passed
+			response.NotFound(c, realServiceUser.ErrUserNotFound.Error())
 			return
 		}
-
+		if errors.Is(err, realServiceUser.ErrEmailInUse) {
+			response.Conflict(c, realServiceUser.ErrEmailInUse.Error())
+			return
+		}
 		// Log the actual error for debugging but return a generic message
-		h.logger.Error("Failed to update user", zap.Error(err), zap.String("user_id", idParam))
+		h.logger.Error("Failed to update user",
+			zap.String("operation", "UpdateProfile"),
+			zap.Error(err),
+			zap.String("user_id", idParam))
 		response.InternalServerError(c, "Something went wrong. Please try again later.")
 		return
 	}
@@ -255,7 +253,7 @@ func (h *Handler) UpdateProfile(c *gin.Context) {
 // @Failure 401 {object} response.Response "Current password is incorrect"
 // @Failure 404 {object} response.Response "User not found"
 // @Failure 500 {object} response.Response "Internal server error"
-// @Router /users/{id}/password [put]
+// @Router /users/{id}/password [patch]
 func (h *Handler) UpdatePassword(c *gin.Context) {
 	idParam := c.Param("id")
 
@@ -268,7 +266,10 @@ func (h *Handler) UpdatePassword(c *gin.Context) {
 
 	var req UpdatePasswordRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		h.logger.Warn("Invalid password update request", zap.Error(err))
+		h.logger.Warn("Invalid password update request",
+			zap.String("operation", "UpdatePassword"),
+			zap.Error(err),
+			zap.String("user_id", idParam))
 		response.BadRequest(c, "Invalid request data")
 		return
 	}
@@ -276,21 +277,23 @@ func (h *Handler) UpdatePassword(c *gin.Context) {
 	// Update password
 	err = h.userService.UpdatePassword(c.Request.Context(), userUUID, req.CurrentPassword, req.NewPassword)
 	if err != nil {
-		// Handle specific error cases
-		switch err.Error() {
-		case "user not found":
-			response.NotFound(c, "User not found")
-			return
-		case "current password is incorrect":
-			response.Unauthorized(c, "Current password is incorrect")
-			return
-		default:
-			// Log the actual error for debugging but return a generic message
-			h.logger.Error("Failed to update password", zap.Error(err), zap.String("user_id", idParam))
-			response.InternalServerError(c, "Something went wrong. Please try again later.")
+		if errors.Is(err, realServiceUser.ErrUserNotFound) {
+			response.NotFound(c, realServiceUser.ErrUserNotFound.Error())
 			return
 		}
+		if errors.Is(err, realServiceUser.ErrIncorrectPassword) {
+			response.Unauthorized(c, realServiceUser.ErrIncorrectPassword.Error())
+			return
+		}
+		// Log the actual error for debugging but return a generic message
+		h.logger.Error("Failed to update password",
+			zap.String("operation", "UpdatePassword"),
+			zap.Error(err),
+			zap.String("user_id", idParam))
+		response.InternalServerError(c, "Something went wrong. Please try again later.")
+		return
 	}
+	// Removed extra closing brace here
 
 	response.Success(c, gin.H{"message": "Password updated successfully"})
 }
@@ -320,14 +323,15 @@ func (h *Handler) DeleteUser(c *gin.Context) {
 	// Delete user
 	err = h.userService.DeleteUser(c.Request.Context(), userUUID)
 	if err != nil {
-		// Handle specific error cases
-		if err.Error() == "user not found" {
-			response.NotFound(c, "User not found")
+		if errors.Is(err, realServiceUser.ErrUserNotFound) {
+			response.NotFound(c, realServiceUser.ErrUserNotFound.Error())
 			return
 		}
-
 		// Log the actual error for debugging but return a generic message
-		h.logger.Error("Failed to delete user", zap.Error(err), zap.String("user_id", idParam))
+		h.logger.Error("Failed to delete user",
+			zap.String("operation", "DeleteUser"),
+			zap.Error(err),
+			zap.String("user_id", idParam))
 		response.InternalServerError(c, "Something went wrong. Please try again later.")
 		return
 	}
@@ -368,7 +372,10 @@ func (h *Handler) GetProfile(c *gin.Context) {
 	// Convert to UUID
 	userUUID, ok := userID.(uuid.UUID)
 	if !ok {
-		h.logger.Error("Failed to convert userID to UUID")
+		h.logger.Error("Failed to convert userID to UUID",
+			zap.String("operation", "GetProfile"),
+			zap.Any("userID_type", userID), // Log the type of userID
+			zap.Any("userID_value", userID)) // Log the value of userID
 		response.InternalServerError(c, "Something went wrong. Please try again later.")
 		return
 	}
@@ -376,11 +383,93 @@ func (h *Handler) GetProfile(c *gin.Context) {
 	// Get user data
 	user, err := h.userService.GetByID(c.Request.Context(), userUUID)
 	if err != nil {
+		if errors.Is(err, realServiceUser.ErrUserNotFound) {
+			// No need to log ErrUserNotFound as error, it's a known case for GetProfile
+			response.NotFound(c, realServiceUser.ErrUserNotFound.Error()) // User from token not found
+			return
+		}
 		// Log the actual error for debugging but return a generic message
-		h.logger.Error("Failed to get user profile", zap.Error(err), zap.String("user_id", userUUID.String()))
+		h.logger.Error("Failed to get user profile",
+			zap.String("operation", "GetProfile"),
+			zap.Error(err),
+			zap.String("user_id", userUUID.String()))
 		response.InternalServerError(c, "Something went wrong. Please try again later.")
 		return
 	}
 
 	response.Success(c, toUserResponse(user))
+}
+
+// UpdateCurrentUserProfile handles updating the currently authenticated user's profile
+// @Summary Update current user profile
+// @Description Update the currently authenticated user's profile information
+// @Tags profile
+// @Accept json
+// @Produce json
+// @Param request body UpdateCurrentUserProfileRequest true "User profile update information"
+// @Success 200 {object} response.Response{data=UserResponse} "Profile updated successfully"
+// @Failure 400 {object} response.Response "Invalid request data"
+// @Failure 401 {object} response.Response "User not authenticated"
+// @Failure 500 {object} response.Response "Internal server error"
+// @Router /profile [put]
+func (h *Handler) UpdateCurrentUserProfile(c *gin.Context) {
+	// Get user ID from context (set by auth middleware)
+	userIDRaw, exists := c.Get("userID")
+	if !exists {
+		response.Unauthorized(c, "User not authenticated")
+		return
+	}
+
+	// Convert to UUID
+	userUUID, ok := userIDRaw.(uuid.UUID)
+	if !ok {
+		h.logger.Error("Failed to convert userID to UUID from context for profile update",
+			zap.String("operation", "UpdateCurrentUserProfile"),
+			zap.Any("userID_type", userIDRaw),
+			zap.Any("userID_value", userIDRaw))
+		response.InternalServerError(c, "Something went wrong. Please try again later.")
+		return
+	}
+
+	var req UpdateCurrentUserProfileRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		h.logger.Warn("Invalid update current user profile request",
+			zap.String("operation", "UpdateCurrentUserProfile"),
+			zap.Error(err),
+			zap.String("user_id", userUUID.String()))
+		response.BadRequest(c, "Invalid request data: "+err.Error())
+		return
+	}
+
+	updates := domainUser.UpdateUserParams{}
+	if req.FirstName != nil {
+		updates.FirstName = *req.FirstName
+	}
+	if req.LastName != nil {
+		updates.LastName = *req.LastName
+	}
+	if req.Email != nil {
+		updates.Email = *req.Email
+	}
+
+	// Call the existing Update method in the service
+	updatedUser, err := h.userService.Update(c.Request.Context(), userUUID, updates)
+	if err != nil {
+		if errors.Is(err, realServiceUser.ErrUserNotFound) { // Should not happen if userID from token is valid and user exists
+			response.NotFound(c, realServiceUser.ErrUserNotFound.Error())
+			return
+		}
+		if errors.Is(err, realServiceUser.ErrEmailInUse) {
+			response.Conflict(c, realServiceUser.ErrEmailInUse.Error())
+			return
+		}
+		h.logger.Error("Failed to update current user profile",
+			zap.String("operation", "UpdateCurrentUserProfile"),
+			zap.Error(err),
+			zap.String("user_id", userUUID.String()))
+		response.InternalServerError(c, "Something went wrong. Please try again later.")
+		return
+	}
+
+	response.Success(c, toUserResponse(updatedUser))
 }

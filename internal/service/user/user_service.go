@@ -8,11 +8,7 @@ import (
 
 	"github.com/google/uuid"
 	domainUser "github.com/yi-tech/go-user-service/internal/domain/user"
-	repoUser "github.com/yi-tech/go-user-service/internal/repository/user"
-)
-
-var (
-	ErrUserAlreadyExists = errors.New("user with this username or email already exists")
+	"gorm.io/gorm"
 )
 
 // UserService defines the interface for user-related business logic.
@@ -40,24 +36,27 @@ type UserService interface {
 }
 
 type userService struct {
-	userRepo repoUser.UserRepository
+	userRepo domainUser.Repository
 }
 
 // NewUserService creates a new instance of UserService.
-func NewUserService(userRepo repoUser.UserRepository) UserService {
+func NewUserService(userRepo domainUser.Repository) UserService {
 	return &userService{userRepo: userRepo}
 }
 
 // Register creates a new user with the provided credentials
 func (s *userService) Register(ctx context.Context, email, password, firstName, lastName string) (*domainUser.User, error) {
 	// Check if user already exists
-	existingUser, err := s.userRepo.GetUserByEmail(email)
+	existingUser, err := s.userRepo.GetByEmail(ctx, email)
 	if err != nil {
-		return nil, fmt.Errorf("failed to check existing user: %w", err)
+		// If GORM's record not found, it's not an error for this check, means email is available
+		if !errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, fmt.Errorf("failed to check existing user: %w", err)
+		}
 	}
 
 	if existingUser != nil {
-		return nil, errors.New("user already exists")
+		return nil, ErrUserAlreadyExists
 	}
 
 	// Create new user
@@ -78,7 +77,7 @@ func (s *userService) Register(ctx context.Context, email, password, firstName, 
 	}
 
 	// Save user to database
-	if err := s.userRepo.CreateUser(user); err != nil {
+	if err := s.userRepo.Create(ctx, user); err != nil {
 		return nil, fmt.Errorf("failed to create user: %w", err)
 	}
 
@@ -86,21 +85,39 @@ func (s *userService) Register(ctx context.Context, email, password, firstName, 
 }
 
 func (s *userService) GetByEmail(ctx context.Context, email string) (*domainUser.User, error) {
-	return s.userRepo.GetUserByEmail(email)
+	user, err := s.userRepo.GetByEmail(ctx, email)
+	if err != nil {
+		// Assuming repo returns gorm.ErrRecordNotFound which should be translated
+		// For now, let's expect direct error or nil user from repo for not found
+		return nil, fmt.Errorf("failed to get user by email from repository: %w", err)
+	}
+	if user == nil {
+		return nil, ErrUserNotFound
+	}
+	return user, nil
 }
 
 func (s *userService) GetByID(ctx context.Context, id uuid.UUID) (*domainUser.User, error) {
-	return s.userRepo.GetUserByID(uint(id.ID()))
+	user, err := s.userRepo.GetByID(ctx, id)
+	if err != nil {
+		// Assuming repo returns gorm.ErrRecordNotFound which should be translated
+		// For now, let's expect direct error or nil user from repo for not found
+		return nil, fmt.Errorf("failed to get user by id from repository: %w", err)
+	}
+	if user == nil { // This check is key if repo returns (nil, nil) on not found
+		return nil, ErrUserNotFound
+	}
+	return user, nil
 }
 
 func (s *userService) UpdateUser(ctx context.Context, id uuid.UUID, firstName, lastName string) (*domainUser.User, error) {
 	// Get existing user
-	existingUser, err := s.userRepo.GetUserByID(uint(id.ID()))
+	existingUser, err := s.userRepo.GetByID(ctx, id)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get user: %w", err)
+		return nil, fmt.Errorf("failed to get user for update: %w", err)
 	}
 	if existingUser == nil {
-		return nil, fmt.Errorf("user not found")
+		return nil, ErrUserNotFound
 	}
 
 	// Update fields
@@ -108,7 +125,7 @@ func (s *userService) UpdateUser(ctx context.Context, id uuid.UUID, firstName, l
 	existingUser.LastName = lastName
 
 	// Update user
-	if err := s.userRepo.UpdateUser(existingUser); err != nil {
+	if err := s.userRepo.Update(ctx, existingUser); err != nil {
 		return nil, fmt.Errorf("failed to update user: %w", err)
 	}
 
@@ -117,22 +134,26 @@ func (s *userService) UpdateUser(ctx context.Context, id uuid.UUID, firstName, l
 
 func (s *userService) Update(ctx context.Context, id uuid.UUID, params domainUser.UpdateUserParams) (*domainUser.User, error) {
 	// Get existing user
-	existingUser, err := s.userRepo.GetUserByID(uint(id.ID()))
+	existingUser, err := s.userRepo.GetByID(ctx, id)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get user: %w", err)
+		return nil, fmt.Errorf("failed to get user for update: %w", err)
 	}
 	if existingUser == nil {
-		return nil, fmt.Errorf("user not found")
+		return nil, ErrUserNotFound
 	}
 
 	// Check if email is being changed and if it's already in use
 	if params.Email != "" && params.Email != existingUser.Email {
-		existingUserByEmail, err := s.userRepo.GetUserByEmail(params.Email)
+		// Need to handle potential errors from GetByEmail itself
+		conflictingUser, err := s.userRepo.GetByEmail(ctx, params.Email)
 		if err != nil {
-			return nil, fmt.Errorf("failed to check email availability: %w", err)
+			// If GORM's record not found, it's not an error for this check, means email is available for use by current user
+			if !errors.Is(err, gorm.ErrRecordNotFound) {
+				return nil, fmt.Errorf("failed to check email availability: %w", err)
+			}
 		}
-		if existingUserByEmail != nil {
-			return nil, fmt.Errorf("email already in use")
+		if conflictingUser != nil {
+			return nil, ErrEmailInUse
 		}
 		existingUser.Email = params.Email
 	}
@@ -147,7 +168,7 @@ func (s *userService) Update(ctx context.Context, id uuid.UUID, params domainUse
 	}
 
 	// Update user
-	if err := s.userRepo.UpdateUser(existingUser); err != nil {
+	if err := s.userRepo.Update(ctx, existingUser); err != nil {
 		return nil, fmt.Errorf("failed to update user: %w", err)
 	}
 
@@ -156,34 +177,42 @@ func (s *userService) Update(ctx context.Context, id uuid.UUID, params domainUse
 
 func (s *userService) DeleteUser(ctx context.Context, id uuid.UUID) error {
 	// Get existing user
-	existingUser, err := s.userRepo.GetUserByID(uint(id.ID()))
+	existingUser, err := s.userRepo.GetByID(ctx, id)
 	if err != nil {
-		return fmt.Errorf("failed to get user: %w", err)
+		return fmt.Errorf("failed to get user for delete: %w", err)
 	}
 	if existingUser == nil {
-		return fmt.Errorf("user not found")
+		return ErrUserNotFound
 	}
 
 	// Delete user
-	return s.userRepo.DeleteUser(uint(id.ID()))
+	return s.userRepo.Delete(ctx, id)
 }
 
 func (s *userService) UpdatePassword(ctx context.Context, id uuid.UUID, currentPassword, newPassword string) error {
 	// Get existing user
-	existingUser, err := s.userRepo.GetUserByID(uint(id.ID()))
+	existingUser, err := s.userRepo.GetByID(ctx, id)
 	if err != nil {
-		return fmt.Errorf("failed to get user: %w", err)
+		return fmt.Errorf("failed to get user for password update: %w", err)
 	}
 	if existingUser == nil {
-		return fmt.Errorf("user not found")
+		return ErrUserNotFound
 	}
 
 	// Verify current password
-	// TODO: Implement password verification
+	if !existingUser.CheckPassword(currentPassword) {
+		return ErrIncorrectPassword
+	}
 
 	// Update password
 	existingUser.Password = newPassword
+	if err := existingUser.HashPassword(); err != nil {
+		return fmt.Errorf("failed to hash new password: %w", err)
+	}
 
 	// Save user
-	return s.userRepo.UpdateUser(existingUser)
+	if err := s.userRepo.Update(ctx, existingUser); err != nil {
+		return fmt.Errorf("failed to update user: %w", err)
+	}
+	return nil
 }

@@ -11,18 +11,19 @@ import (
 	"github.com/go-redis/redis/v8"
 	"github.com/yi-tech/go-user-service/internal/config"
 	"github.com/yi-tech/go-user-service/internal/domain/auth"
+	user2 "github.com/yi-tech/go-user-service/internal/domain/user"
 	"github.com/yi-tech/go-user-service/internal/middleware"
 	"github.com/yi-tech/go-user-service/internal/provider"
 	auth2 "github.com/yi-tech/go-user-service/internal/repository/auth"
-	user2 "github.com/yi-tech/go-user-service/internal/repository/user"
+	user3 "github.com/yi-tech/go-user-service/internal/repository/user"
 	auth3 "github.com/yi-tech/go-user-service/internal/service/auth"
 	"github.com/yi-tech/go-user-service/internal/service/user"
 	"github.com/yi-tech/go-user-service/internal/transport/grpc"
 	auth5 "github.com/yi-tech/go-user-service/internal/transport/grpc/auth"
-	user4 "github.com/yi-tech/go-user-service/internal/transport/grpc/user"
+	user5 "github.com/yi-tech/go-user-service/internal/transport/grpc/user"
 	"github.com/yi-tech/go-user-service/internal/transport/http"
 	auth4 "github.com/yi-tech/go-user-service/internal/transport/http/auth"
-	user3 "github.com/yi-tech/go-user-service/internal/transport/http/user"
+	user4 "github.com/yi-tech/go-user-service/internal/transport/http/user"
 	"go.uber.org/zap"
 	"gorm.io/gorm"
 )
@@ -39,8 +40,8 @@ func InitializeApp() (*App, error) {
 	if err != nil {
 		return nil, err
 	}
-	userRepository := ProvideUserRepository(db)
-	userService := ProvideUserService(userRepository)
+	repository := ProvideUserRepository(db)
+	userService := ProvideUserService(repository)
 	logger, err := provider.ProvideLogger(config)
 	if err != nil {
 		return nil, err
@@ -92,8 +93,8 @@ type App struct {
 }
 
 // Provider functions for repositories
-func ProvideUserRepository(db *gorm.DB) user2.UserRepository {
-	return user2.NewUserRepository(db)
+func ProvideUserRepository(db *gorm.DB) user2.Repository {
+	return user3.NewUserRepository(db)
 }
 
 func ProvideAuthRepository(redis2 *redis.Client) auth.AuthRepository {
@@ -101,7 +102,7 @@ func ProvideAuthRepository(redis2 *redis.Client) auth.AuthRepository {
 }
 
 // Provider functions for services
-func ProvideUserService(repo user2.UserRepository) user.UserService {
+func ProvideUserService(repo user2.Repository) user.UserService {
 	return user.NewUserService(repo)
 }
 
@@ -110,8 +111,8 @@ func ProvideAuthService(userService user.UserService, authRepo auth.AuthReposito
 }
 
 // Provider functions for HTTP handlers
-func ProvideUserHttpHandler(userService user.UserService, logger *zap.Logger) *user3.Handler {
-	return user3.NewHandler(userService, logger)
+func ProvideUserHttpHandler(userService user.UserService, logger *zap.Logger) *user4.Handler {
+	return user4.NewHandler(userService, logger)
 }
 
 func ProvideAuthHttpHandler(authService auth.AuthService, logger *zap.Logger) *auth4.Handler {
@@ -119,8 +120,8 @@ func ProvideAuthHttpHandler(authService auth.AuthService, logger *zap.Logger) *a
 }
 
 // Provider functions for gRPC handlers
-func ProvideUserGrpcHandler(userService user.UserService, logger *zap.Logger) *user4.Handler {
-	return user4.NewHandler(userService, logger)
+func ProvideUserGrpcHandler(userService user.UserService, logger *zap.Logger) *user5.Handler {
+	return user5.NewHandler(userService, logger)
 }
 
 func ProvideAuthGrpcHandler(authService auth.AuthService, logger *zap.Logger) *auth5.Handler {
@@ -133,7 +134,7 @@ func ProvideAuthMiddleware(authService auth.AuthService, logger *zap.Logger) gin
 }
 
 // Provider function for router
-func ProvideRouter(userHandler *user3.Handler, authHandler *auth4.Handler, authService auth.AuthService, logger *zap.Logger) *gin.Engine {
+func ProvideRouter(userHandler *user4.Handler, authHandler *auth4.Handler, authService auth.AuthService, logger *zap.Logger) *gin.Engine {
 	return http.NewRouter(userHandler, authHandler, authService, logger)
 }
 

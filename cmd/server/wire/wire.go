@@ -12,6 +12,7 @@ import (
 
 	"github.com/yi-tech/go-user-service/internal/config"
 	domainAuth "github.com/yi-tech/go-user-service/internal/domain/auth"
+	domainUser "github.com/yi-tech/go-user-service/internal/domain/user"
 	"github.com/yi-tech/go-user-service/internal/middleware"
 	"github.com/yi-tech/go-user-service/internal/provider"
 	repoAuth "github.com/yi-tech/go-user-service/internal/repository/auth"
@@ -73,7 +74,7 @@ func InitializeApp() (*App, error) {
 }
 
 // Provider functions for repositories
-func ProvideUserRepository(db *gorm.DB) repoUser.UserRepository {
+func ProvideUserRepository(db *gorm.DB) domainUser.Repository {
 	return repoUser.NewUserRepository(db)
 }
 
@@ -82,7 +83,7 @@ func ProvideAuthRepository(redis *redis.Client) domainAuth.AuthRepository {
 }
 
 // Provider functions for services
-func ProvideUserService(repo repoUser.UserRepository) serviceUser.UserService {
+func ProvideUserService(repo domainUser.Repository) serviceUser.UserService {
 	return serviceUser.NewUserService(repo)
 }
 

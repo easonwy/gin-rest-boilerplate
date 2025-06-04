@@ -33,7 +33,6 @@ require (
 	github.com/swaggo/swag v1.16.4
 	github.com/yi-tech/go-user-service/api/proto v0.0.0-00010101000000-000000000000
 	go.uber.org/zap v1.27.0
-	golang.org/x/net v0.40.0
 )
 
 require (
@@ -83,6 +82,7 @@ require (
 	github.com/ugorji/go/codec v1.2.12 // indirect
 	go.uber.org/multierr v1.10.0 // indirect
 	golang.org/x/arch v0.17.0 // indirect
+	golang.org/x/net v0.40.0 // indirect
 	golang.org/x/sync v0.14.0 // indirect
 	golang.org/x/sys v0.33.0 // indirect
 	golang.org/x/text v0.25.0 // indirect
