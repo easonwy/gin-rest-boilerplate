@@ -16,6 +16,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	domainAuth "github.com/yi-tech/go-user-service/internal/domain/auth" // Alias for domain auth types
+	serviceAuth "github.com/yi-tech/go-user-service/internal/service/auth" // Import for sentinel errors
 	"go.uber.org/zap/zaptest"
 )
 
@@ -123,10 +124,12 @@ func TestLogin(t *testing.T) {
 			name: "Invalid Credentials",
 			body: gin.H{"email": "wrong@example.com", "password": "wrong"},
 			setupMock: func(mockService *MockAuthService) {
-				mockService.On("Login", mock.AnythingOfType("*gin.Context"), "wrong@example.com", "wrong").Return(nil, errors.New("invalid credentials"))
+				// Use the actual sentinel error from the service/auth package
+				mockService.On("Login", mock.AnythingOfType("*gin.Context"), "wrong@example.com", "wrong").Return(nil, serviceAuth.ErrInvalidCredentials)
 			},
 			expectedStatus: http.StatusUnauthorized,
-			expectedBody:   `{"code":401,"message":"Invalid email or password"}`,
+			// The message should now match ErrInvalidCredentials.Error()
+			expectedBody:   `{"code":401,"message":"invalid credentials"}`,
 		},
 		{
 			name: "Internal ServerError",
@@ -216,10 +219,12 @@ func TestRefreshToken(t *testing.T) {
 			name: "Invalid or Expired Token",
 			body: gin.H{"refresh_token": "invalid-token"},
 			setupMock: func(mockService *MockAuthService) {
-				mockService.On("RefreshToken", mock.AnythingOfType("*gin.Context"), "invalid-token").Return(nil, errors.New("invalid or expired refresh token"))
+				// Use the actual sentinel error
+				mockService.On("RefreshToken", mock.AnythingOfType("*gin.Context"), "invalid-token").Return(nil, serviceAuth.ErrInvalidOrExpiredToken)
 			},
 			expectedStatus: http.StatusUnauthorized,
-			expectedBody:   `{"code":401,"message":"Invalid or expired refresh token"}`,
+			// The message should now match ErrInvalidOrExpiredToken.Error()
+			expectedBody:   `{"code":401,"message":"invalid or expired refresh token"}`,
 		},
 		{
 			name: "Internal Server Error on Refresh",
@@ -282,11 +287,11 @@ func TestLogout(t *testing.T) {
 			name: "Success",
 			setupContext: func(c *gin.Context) {
 				userID, _ := uuid.Parse("00000000-0000-0000-0000-000000000123")
-				c.Set("user_id", userID)
+				c.Set("userID", userID) // Corrected context key
 			},
 			setupMock: func(mockService *MockAuthService) {
 				userID, _ := uuid.Parse("00000000-0000-0000-0000-000000000123")
-				mockService.On("Logout", mock.Anything, userID).Return(nil)
+				mockService.On("Logout", mock.Anything, userID).Return(nil) // mock.Anything matches context.Context
 			},
 			expectedStatus: http.StatusOK,
 			expectedBody:   `{"code":200,"message":"Success","data":{"message":"Logged out successfully"}}`,
@@ -301,7 +306,7 @@ func TestLogout(t *testing.T) {
 		{
 			name: "Internal Server Error - Invalid User ID Type in Context",
 			setupContext: func(c *gin.Context) {
-				c.Set("user_id", "not-a-uuid") // Set user_id as string
+				c.Set("userID", "not-a-uuid") // Corrected context key, set user_id as string
 			},
 			setupMock:      func(mockService *MockAuthService) {},
 			expectedStatus: http.StatusInternalServerError,
@@ -311,11 +316,12 @@ func TestLogout(t *testing.T) {
 			name: "Internal Server Error - Logout Fails",
 			setupContext: func(c *gin.Context) {
 				userID, _ := uuid.Parse("00000000-0000-0000-0000-000000000123")
-				c.Set("user_id", userID)
+				c.Set("userID", userID) // Corrected context key
 			},
 			setupMock: func(mockService *MockAuthService) {
 				userID, _ := uuid.Parse("00000000-0000-0000-0000-000000000123")
-				mockService.On("Logout", mock.Anything, userID).Return(errors.New("session not found"))
+				// Mocking a generic error for this case, as the handler should catch it and return 500
+				mockService.On("Logout", mock.Anything, userID).Return(errors.New("database error"))
 			},
 			expectedStatus: http.StatusInternalServerError,
 			expectedBody:   `{"code":500,"message":"Something went wrong. Please try again later."}`,

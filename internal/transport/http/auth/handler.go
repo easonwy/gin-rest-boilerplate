@@ -3,11 +3,15 @@ package auth
 import (
 	"fmt"
 
+	"errors" // Added for errors.Is
+
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"go.uber.org/zap"
 
 	domainAuth "github.com/yi-tech/go-user-service/internal/domain/auth"
+	serviceAuth "github.com/yi-tech/go-user-service/internal/service/auth" // Import for sentinel errors
+	// userService "github.com/yi-tech/go-user-service/internal/service/user" // For userService.ErrUserNotFound if needed directly
 	"github.com/yi-tech/go-user-service/internal/transport/http/response"
 )
 
@@ -40,7 +44,9 @@ func NewHandler(authService domainAuth.AuthService, logger *zap.Logger) *Handler
 func (h *Handler) Login(c *gin.Context) {
 	var req LoginRequest // Use local DTO
 	if err := c.ShouldBindJSON(&req); err != nil {
-		h.logger.Warn("Invalid login request", zap.Error(err))
+		h.logger.Warn("Invalid login request",
+			zap.String("operation", "Login"),
+			zap.Error(err))
 		response.BadRequest(c, "Invalid request data")
 		return
 	}
@@ -48,16 +54,18 @@ func (h *Handler) Login(c *gin.Context) {
 	// Authenticate user
 	tokenPair, err := h.authService.Login(c.Request.Context(), req.Email, req.Password)
 	if err != nil {
-		h.logger.Info("Login attempt failed", zap.Error(err), zap.String("email", req.Email))
-
-		// Handle specific error cases with user-friendly messages
-		if err.Error() == "invalid credentials" {
-			response.Unauthorized(c, "Invalid email or password")
-			return
+		if errors.Is(err, serviceAuth.ErrInvalidCredentials) {
+			h.logger.Info("Login attempt failed: invalid credentials", // This log is fine
+				zap.String("operation", "Login"),
+				zap.String("email", req.Email))
+			response.Unauthorized(c, serviceAuth.ErrInvalidCredentials.Error())
+			return // This return was correctly placed. The issue might be in test expectation or mock.
 		}
-
-		// Log the actual error for debugging but return a generic message to the user
-		h.logger.Error("Login error", zap.Error(err), zap.String("email", req.Email))
+		// For other (unexpected) errors, Error level is appropriate.
+		h.logger.Error("Login error (unexpected)", // Clarified log message
+			zap.String("operation", "Login"),
+			zap.Error(err), // This err is not ErrInvalidCredentials here
+			zap.String("email", req.Email))
 		response.InternalServerError(c, "Something went wrong. Please try again later.")
 		return
 	}
@@ -87,7 +95,9 @@ func (h *Handler) Login(c *gin.Context) {
 func (h *Handler) RefreshToken(c *gin.Context) {
 	var req RefreshTokenRequest // Use local DTO
 	if err := c.ShouldBindJSON(&req); err != nil {
-		h.logger.Warn("Invalid refresh token request", zap.Error(err))
+		h.logger.Warn("Invalid refresh token request",
+			zap.String("operation", "RefreshToken"),
+			zap.Error(err))
 		response.BadRequest(c, "Invalid request data")
 		return
 	}
@@ -95,14 +105,17 @@ func (h *Handler) RefreshToken(c *gin.Context) {
 	// Refresh token
 	tokenPair, err := h.authService.RefreshToken(c.Request.Context(), req.RefreshToken)
 	if err != nil {
-		// Handle specific error cases
-		if err.Error() == "invalid or expired refresh token" {
-			response.Unauthorized(c, "Invalid or expired refresh token")
-			return
+		if errors.Is(err, serviceAuth.ErrInvalidOrExpiredToken) {
+			h.logger.Info("Refresh token failed: invalid or expired", // This log is fine
+				zap.String("operation", "RefreshToken"),
+				zap.Error(err)) // err here is ErrInvalidOrExpiredToken
+			response.Unauthorized(c, serviceAuth.ErrInvalidOrExpiredToken.Error())
+			return // This return was correctly placed.
 		}
-
-		// Log the actual error for debugging but return a generic message
-		h.logger.Error("Failed to refresh token", zap.Error(err))
+		// For other (unexpected) errors
+		h.logger.Error("Failed to refresh token (unexpected)", // Clarified log message
+			zap.String("operation", "RefreshToken"),
+			zap.Error(err)) // This err is not ErrInvalidOrExpiredToken here
 		response.InternalServerError(c, "Something went wrong. Please try again later.")
 		return
 	}
@@ -130,16 +143,19 @@ func (h *Handler) RefreshToken(c *gin.Context) {
 // @Router /auth/logout [post]
 func (h *Handler) Logout(c *gin.Context) {
 	// Get user ID from context (assuming it's set by auth middleware)
-	userID, exists := c.Get("user_id")
+	userIDRaw, exists := c.Get("userID") // Changed "user_id" to "userID"
 	if !exists {
 		response.Unauthorized(c, "Authentication required")
 		return
 	}
 
 	// Assert userID to uuid.UUID
-	userIDUUID, ok := userID.(uuid.UUID)
+	userIDUUID, ok := userIDRaw.(uuid.UUID)
 	if !ok {
-		h.logger.Error("Failed to assert user ID to uuid.UUID", zap.Any("user_id_type", fmt.Sprintf("%T", userID)), zap.Any("user_id_value", userID))
+		h.logger.Error("Failed to assert user ID to uuid.UUID for logout",
+			zap.String("operation", "Logout"),
+			zap.Any("user_id_type", fmt.Sprintf("%T", userIDRaw)),
+			zap.Any("user_id_value", userIDRaw))
 		response.InternalServerError(c, "Something went wrong. Please try again later.")
 		return
 	}
@@ -147,7 +163,10 @@ func (h *Handler) Logout(c *gin.Context) {
 	// Logout user
 	err := h.authService.Logout(c.Request.Context(), userIDUUID)
 	if err != nil {
-		h.logger.Error("Failed to logout user", zap.Error(err), zap.String("user_id", userIDUUID.String()))
+		h.logger.Error("Failed to logout user",
+			zap.String("operation", "Logout"),
+			zap.Error(err),
+			zap.String("user_id", userIDUUID.String()))
 		response.InternalServerError(c, "Something went wrong. Please try again later.")
 		return
 	}

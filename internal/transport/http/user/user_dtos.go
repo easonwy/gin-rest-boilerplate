@@ -49,3 +49,10 @@ type UpdatePasswordRequest struct {
 	CurrentPassword string `json:"current_password" binding:"required"`
 	NewPassword     string `json:"new_password" binding:"required,min=8"`
 }
+
+// UpdateCurrentUserProfileRequest defines the request body for updating the current user's profile.
+type UpdateCurrentUserProfileRequest struct {
+	FirstName *string `json:"first_name"`
+	LastName  *string `json:"last_name"`
+	Email     *string `json:"email" binding:"omitempty,email"`
+}

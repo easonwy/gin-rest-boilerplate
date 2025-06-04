@@ -10,14 +10,14 @@ import (
 
 // User represents a user in the system.
 type User struct {
-	ID        uuid.UUID `gorm:"type:uuid;primaryKey" json:"id"`
-	Username  string    `gorm:"uniqueIndex;not null" json:"username"`
+	ID        uuid.UUID `json:"id"`
+	Username  string    `json:"username"`
 	FirstName string    `json:"first_name,omitempty"`
 	LastName  string    `json:"last_name,omitempty"`
-	Password  string    `gorm:"not null" json:"-"` // Store hashed password, exclude from JSON output
-	Email     string    `gorm:"uniqueIndex;not null" json:"email"`
-	CreatedAt time.Time `gorm:"autoCreateTime" json:"created_at"`
-	UpdatedAt time.Time `gorm:"autoUpdateTime" json:"updated_at"`
+	Password  string    `json:"-"` // Store hashed password, exclude from JSON output
+	Email     string    `json:"email"`
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
 }
 
 // UpdateUserParams represents the parameters for updating a user.
@@ -25,11 +25,6 @@ type UpdateUserParams struct {
 	FirstName string
 	LastName  string
 	Email     string
-}
-
-// TableName specifies the table name for the User model.
-func (User) TableName() string {
-	return "users"
 }
 
 // HashPassword hashes the user's password.

@@ -1,11 +1,13 @@
 basePath: /api/v1
 definitions:
-  github_com_yi-tech_go-user-service_internal_transport_http_response.Response:
+  auth.LoginResponse:
     properties:
-      code:
+      access_token:
+        type: string
+      expires_in:
+        description: Access token expiry time in seconds
         type: integer
-      data: {}
-      message:
+      refresh_token:
         type: string
     type: object
   internal_transport_http_auth.LoginRequest:
@@ -17,16 +19,6 @@ definitions:
     required:
     - email
     - password
-    type: object
-  internal_transport_http_auth.LoginResponse:
-    properties:
-      access_token:
-        type: string
-      expires_in:
-        description: Access token expiry time in seconds
-        type: integer
-      refresh_token:
-        type: string
     type: object
   internal_transport_http_auth.RefreshTokenRequest:
     properties:
@@ -46,7 +38,24 @@ definitions:
     - current_password
     - new_password
     type: object
-  internal_transport_http_user.UserRegisterRequest:
+  response.Response:
+    properties:
+      code:
+        type: integer
+      data: {}
+      message:
+        type: string
+    type: object
+  user.UpdateCurrentUserProfileRequest:
+    properties:
+      email:
+        type: string
+      first_name:
+        type: string
+      last_name:
+        type: string
+    type: object
+  user.UserRegisterRequest:
     properties:
       email:
         type: string
@@ -63,7 +72,7 @@ definitions:
     - last_name
     - password
     type: object
-  internal_transport_http_user.UserResponse:
+  user.UserResponse:
     properties:
       created_at:
         type: string
@@ -78,7 +87,7 @@ definitions:
       updated_at:
         type: string
     type: object
-  internal_transport_http_user.UserUpdateRequest:
+  user.UserUpdateRequest:
     properties:
       email:
         type: string
@@ -120,23 +129,23 @@ paths:
           description: Successfully authenticated
           schema:
             allOf:
-            - $ref: '#/definitions/github_com_yi-tech_go-user-service_internal_transport_http_response.Response'
+            - $ref: '#/definitions/response.Response'
             - properties:
                 data:
-                  $ref: '#/definitions/internal_transport_http_auth.LoginResponse'
+                  $ref: '#/definitions/auth.LoginResponse'
               type: object
         "400":
           description: Invalid request data
           schema:
-            $ref: '#/definitions/github_com_yi-tech_go-user-service_internal_transport_http_response.Response'
+            $ref: '#/definitions/response.Response'
         "401":
           description: Invalid email or password
           schema:
-            $ref: '#/definitions/github_com_yi-tech_go-user-service_internal_transport_http_response.Response'
+            $ref: '#/definitions/response.Response'
         "500":
           description: Internal server error
           schema:
-            $ref: '#/definitions/github_com_yi-tech_go-user-service_internal_transport_http_response.Response'
+            $ref: '#/definitions/response.Response'
       summary: User login
       tags:
       - auth
@@ -151,15 +160,15 @@ paths:
         "200":
           description: Logged out successfully
           schema:
-            $ref: '#/definitions/github_com_yi-tech_go-user-service_internal_transport_http_response.Response'
+            $ref: '#/definitions/response.Response'
         "401":
           description: Authentication required
           schema:
-            $ref: '#/definitions/github_com_yi-tech_go-user-service_internal_transport_http_response.Response'
+            $ref: '#/definitions/response.Response'
         "500":
           description: Internal server error
           schema:
-            $ref: '#/definitions/github_com_yi-tech_go-user-service_internal_transport_http_response.Response'
+            $ref: '#/definitions/response.Response'
       security:
       - BearerAuth: []
       summary: User logout
@@ -184,26 +193,92 @@ paths:
           description: Token refreshed successfully
           schema:
             allOf:
-            - $ref: '#/definitions/github_com_yi-tech_go-user-service_internal_transport_http_response.Response'
+            - $ref: '#/definitions/response.Response'
             - properties:
                 data:
-                  $ref: '#/definitions/internal_transport_http_auth.LoginResponse'
+                  $ref: '#/definitions/auth.LoginResponse'
               type: object
         "400":
           description: Invalid request data
           schema:
-            $ref: '#/definitions/github_com_yi-tech_go-user-service_internal_transport_http_response.Response'
+            $ref: '#/definitions/response.Response'
         "401":
           description: Invalid or expired refresh token
           schema:
-            $ref: '#/definitions/github_com_yi-tech_go-user-service_internal_transport_http_response.Response'
+            $ref: '#/definitions/response.Response'
         "500":
           description: Internal server error
           schema:
-            $ref: '#/definitions/github_com_yi-tech_go-user-service_internal_transport_http_response.Response'
+            $ref: '#/definitions/response.Response'
       summary: Refresh access token
       tags:
       - auth
+  /profile:
+    get:
+      consumes:
+      - application/json
+      description: Retrieve the current user's profile information
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: User profile information
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/user.UserResponse'
+              type: object
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/response.Response'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/response.Response'
+      summary: Get current user profile
+      tags:
+      - profile
+    put:
+      consumes:
+      - application/json
+      description: Update the currently authenticated user's profile information
+      parameters:
+      - description: User profile update information
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/user.UpdateCurrentUserProfileRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Profile updated successfully
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/user.UserResponse'
+              type: object
+        "400":
+          description: Invalid request data
+          schema:
+            $ref: '#/definitions/response.Response'
+        "401":
+          description: User not authenticated
+          schema:
+            $ref: '#/definitions/response.Response'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/response.Response'
+      summary: Update current user profile
+      tags:
+      - profile
   /users:
     get:
       consumes:
@@ -222,23 +297,23 @@ paths:
           description: User information
           schema:
             allOf:
-            - $ref: '#/definitions/github_com_yi-tech_go-user-service_internal_transport_http_response.Response'
+            - $ref: '#/definitions/response.Response'
             - properties:
                 data:
-                  $ref: '#/definitions/internal_transport_http_user.UserResponse'
+                  $ref: '#/definitions/user.UserResponse'
               type: object
         "400":
           description: Email is required
           schema:
-            $ref: '#/definitions/github_com_yi-tech_go-user-service_internal_transport_http_response.Response'
+            $ref: '#/definitions/response.Response'
         "404":
           description: User not found
           schema:
-            $ref: '#/definitions/github_com_yi-tech_go-user-service_internal_transport_http_response.Response'
+            $ref: '#/definitions/response.Response'
         "500":
           description: Internal server error
           schema:
-            $ref: '#/definitions/github_com_yi-tech_go-user-service_internal_transport_http_response.Response'
+            $ref: '#/definitions/response.Response'
       summary: Get a user by email
       tags:
       - users
@@ -259,19 +334,19 @@ paths:
         "200":
           description: User deleted successfully
           schema:
-            $ref: '#/definitions/github_com_yi-tech_go-user-service_internal_transport_http_response.Response'
+            $ref: '#/definitions/response.Response'
         "400":
           description: Invalid user ID format
           schema:
-            $ref: '#/definitions/github_com_yi-tech_go-user-service_internal_transport_http_response.Response'
+            $ref: '#/definitions/response.Response'
         "404":
           description: User not found
           schema:
-            $ref: '#/definitions/github_com_yi-tech_go-user-service_internal_transport_http_response.Response'
+            $ref: '#/definitions/response.Response'
         "500":
           description: Internal server error
           schema:
-            $ref: '#/definitions/github_com_yi-tech_go-user-service_internal_transport_http_response.Response'
+            $ref: '#/definitions/response.Response'
       summary: Delete a user
       tags:
       - users
@@ -292,23 +367,23 @@ paths:
           description: User information
           schema:
             allOf:
-            - $ref: '#/definitions/github_com_yi-tech_go-user-service_internal_transport_http_response.Response'
+            - $ref: '#/definitions/response.Response'
             - properties:
                 data:
-                  $ref: '#/definitions/internal_transport_http_user.UserResponse'
+                  $ref: '#/definitions/user.UserResponse'
               type: object
         "400":
           description: Invalid user ID format
           schema:
-            $ref: '#/definitions/github_com_yi-tech_go-user-service_internal_transport_http_response.Response'
+            $ref: '#/definitions/response.Response'
         "404":
           description: User not found
           schema:
-            $ref: '#/definitions/github_com_yi-tech_go-user-service_internal_transport_http_response.Response'
+            $ref: '#/definitions/response.Response'
         "500":
           description: Internal server error
           schema:
-            $ref: '#/definitions/github_com_yi-tech_go-user-service_internal_transport_http_response.Response'
+            $ref: '#/definitions/response.Response'
       summary: Get a user by ID
       tags:
       - users
@@ -327,7 +402,7 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/internal_transport_http_user.UserUpdateRequest'
+          $ref: '#/definitions/user.UserUpdateRequest'
       produces:
       - application/json
       responses:
@@ -335,28 +410,28 @@ paths:
           description: User updated successfully
           schema:
             allOf:
-            - $ref: '#/definitions/github_com_yi-tech_go-user-service_internal_transport_http_response.Response'
+            - $ref: '#/definitions/response.Response'
             - properties:
                 data:
-                  $ref: '#/definitions/internal_transport_http_user.UserResponse'
+                  $ref: '#/definitions/user.UserResponse'
               type: object
         "400":
           description: Invalid request data or user ID format
           schema:
-            $ref: '#/definitions/github_com_yi-tech_go-user-service_internal_transport_http_response.Response'
+            $ref: '#/definitions/response.Response'
         "404":
           description: User not found
           schema:
-            $ref: '#/definitions/github_com_yi-tech_go-user-service_internal_transport_http_response.Response'
+            $ref: '#/definitions/response.Response'
         "500":
           description: Internal server error
           schema:
-            $ref: '#/definitions/github_com_yi-tech_go-user-service_internal_transport_http_response.Response'
+            $ref: '#/definitions/response.Response'
       summary: Update user profile
       tags:
       - users
   /users/{id}/password:
-    put:
+    patch:
       consumes:
       - application/json
       description: Update a user's password
@@ -378,23 +453,23 @@ paths:
         "200":
           description: Password updated successfully
           schema:
-            $ref: '#/definitions/github_com_yi-tech_go-user-service_internal_transport_http_response.Response'
+            $ref: '#/definitions/response.Response'
         "400":
           description: Invalid request data or user ID format
           schema:
-            $ref: '#/definitions/github_com_yi-tech_go-user-service_internal_transport_http_response.Response'
+            $ref: '#/definitions/response.Response'
         "401":
           description: Current password is incorrect
           schema:
-            $ref: '#/definitions/github_com_yi-tech_go-user-service_internal_transport_http_response.Response'
+            $ref: '#/definitions/response.Response'
         "404":
           description: User not found
           schema:
-            $ref: '#/definitions/github_com_yi-tech_go-user-service_internal_transport_http_response.Response'
+            $ref: '#/definitions/response.Response'
         "500":
           description: Internal server error
           schema:
-            $ref: '#/definitions/github_com_yi-tech_go-user-service_internal_transport_http_response.Response'
+            $ref: '#/definitions/response.Response'
       summary: Update user password
       tags:
       - users
@@ -409,7 +484,7 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/internal_transport_http_user.UserRegisterRequest'
+          $ref: '#/definitions/user.UserRegisterRequest'
       produces:
       - application/json
       responses:
@@ -417,23 +492,23 @@ paths:
           description: User registered successfully
           schema:
             allOf:
-            - $ref: '#/definitions/github_com_yi-tech_go-user-service_internal_transport_http_response.Response'
+            - $ref: '#/definitions/response.Response'
             - properties:
                 data:
-                  $ref: '#/definitions/internal_transport_http_user.UserResponse'
+                  $ref: '#/definitions/user.UserResponse'
               type: object
         "400":
           description: Invalid request data
           schema:
-            $ref: '#/definitions/github_com_yi-tech_go-user-service_internal_transport_http_response.Response'
+            $ref: '#/definitions/response.Response'
         "409":
           description: Email already exists
           schema:
-            $ref: '#/definitions/github_com_yi-tech_go-user-service_internal_transport_http_response.Response'
+            $ref: '#/definitions/response.Response'
         "500":
           description: Internal server error
           schema:
-            $ref: '#/definitions/github_com_yi-tech_go-user-service_internal_transport_http_response.Response'
+            $ref: '#/definitions/response.Response'
       summary: Register a new user
       tags:
       - users

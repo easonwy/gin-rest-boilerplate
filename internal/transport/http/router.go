@@ -54,7 +54,7 @@ func SetupRouter(
 			// User routes
 			userGroup := protected.Group("/users")
 			{
-				userGroup.PUT("/:id", userHandler.UpdateProfile)
+				userGroup.PUT("/:id", userHandler.UpdateProfile) // This remains PUT for admin/specific user update
 				userGroup.PATCH("/:id/password", userHandler.UpdatePassword)
 				userGroup.DELETE("/:id", userHandler.DeleteUser)
 			}
@@ -62,8 +62,8 @@ func SetupRouter(
 			// Profile routes
 			profileGroup := protected.Group("/profile")
 			{
-				profileGroup.GET("", userHandler.GetUserByID) // Temporarily use GetUserByID until GetProfile is implemented
-				profileGroup.PUT("", userHandler.UpdateProfile)
+				profileGroup.GET("", userHandler.GetProfile)
+				profileGroup.PUT("", userHandler.UpdateCurrentUserProfile)
 			}
 		}
 	}

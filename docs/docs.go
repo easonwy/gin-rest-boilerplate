@@ -54,13 +54,13 @@ const docTemplate = `{
                         "schema": {
                             "allOf": [
                                 {
-                                    "$ref": "#/definitions/github_com_yi-tech_go-user-service_internal_transport_http_response.Response"
+                                    "$ref": "#/definitions/response.Response"
                                 },
                                 {
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/internal_transport_http_auth.LoginResponse"
+                                            "$ref": "#/definitions/auth.LoginResponse"
                                         }
                                     }
                                 }
@@ -70,19 +70,19 @@ const docTemplate = `{
                     "400": {
                         "description": "Invalid request data",
                         "schema": {
-                            "$ref": "#/definitions/github_com_yi-tech_go-user-service_internal_transport_http_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     },
                     "401": {
                         "description": "Invalid email or password",
                         "schema": {
-                            "$ref": "#/definitions/github_com_yi-tech_go-user-service_internal_transport_http_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     },
                     "500": {
                         "description": "Internal server error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_yi-tech_go-user-service_internal_transport_http_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     }
                 }
@@ -110,19 +110,19 @@ const docTemplate = `{
                     "200": {
                         "description": "Logged out successfully",
                         "schema": {
-                            "$ref": "#/definitions/github_com_yi-tech_go-user-service_internal_transport_http_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     },
                     "401": {
                         "description": "Authentication required",
                         "schema": {
-                            "$ref": "#/definitions/github_com_yi-tech_go-user-service_internal_transport_http_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     },
                     "500": {
                         "description": "Internal server error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_yi-tech_go-user-service_internal_transport_http_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     }
                 }
@@ -158,13 +158,13 @@ const docTemplate = `{
                         "schema": {
                             "allOf": [
                                 {
-                                    "$ref": "#/definitions/github_com_yi-tech_go-user-service_internal_transport_http_response.Response"
+                                    "$ref": "#/definitions/response.Response"
                                 },
                                 {
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/internal_transport_http_auth.LoginResponse"
+                                            "$ref": "#/definitions/auth.LoginResponse"
                                         }
                                     }
                                 }
@@ -174,19 +174,128 @@ const docTemplate = `{
                     "400": {
                         "description": "Invalid request data",
                         "schema": {
-                            "$ref": "#/definitions/github_com_yi-tech_go-user-service_internal_transport_http_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     },
                     "401": {
                         "description": "Invalid or expired refresh token",
                         "schema": {
-                            "$ref": "#/definitions/github_com_yi-tech_go-user-service_internal_transport_http_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     },
                     "500": {
                         "description": "Internal server error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_yi-tech_go-user-service_internal_transport_http_response.Response"
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/profile": {
+            "get": {
+                "description": "Retrieve the current user's profile information",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "profile"
+                ],
+                "summary": "Get current user profile",
+                "responses": {
+                    "200": {
+                        "description": "User profile information",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/response.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/user.UserResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    }
+                }
+            },
+            "put": {
+                "description": "Update the currently authenticated user's profile information",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "profile"
+                ],
+                "summary": "Update current user profile",
+                "parameters": [
+                    {
+                        "description": "User profile update information",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/user.UpdateCurrentUserProfileRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Profile updated successfully",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/response.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/user.UserResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid request data",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "401": {
+                        "description": "User not authenticated",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
                         }
                     }
                 }
@@ -220,13 +329,13 @@ const docTemplate = `{
                         "schema": {
                             "allOf": [
                                 {
-                                    "$ref": "#/definitions/github_com_yi-tech_go-user-service_internal_transport_http_response.Response"
+                                    "$ref": "#/definitions/response.Response"
                                 },
                                 {
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/internal_transport_http_user.UserResponse"
+                                            "$ref": "#/definitions/user.UserResponse"
                                         }
                                     }
                                 }
@@ -236,19 +345,19 @@ const docTemplate = `{
                     "400": {
                         "description": "Email is required",
                         "schema": {
-                            "$ref": "#/definitions/github_com_yi-tech_go-user-service_internal_transport_http_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     },
                     "404": {
                         "description": "User not found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_yi-tech_go-user-service_internal_transport_http_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     },
                     "500": {
                         "description": "Internal server error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_yi-tech_go-user-service_internal_transport_http_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     }
                 }
@@ -274,7 +383,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/internal_transport_http_user.UserRegisterRequest"
+                            "$ref": "#/definitions/user.UserRegisterRequest"
                         }
                     }
                 ],
@@ -284,13 +393,13 @@ const docTemplate = `{
                         "schema": {
                             "allOf": [
                                 {
-                                    "$ref": "#/definitions/github_com_yi-tech_go-user-service_internal_transport_http_response.Response"
+                                    "$ref": "#/definitions/response.Response"
                                 },
                                 {
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/internal_transport_http_user.UserResponse"
+                                            "$ref": "#/definitions/user.UserResponse"
                                         }
                                     }
                                 }
@@ -300,19 +409,19 @@ const docTemplate = `{
                     "400": {
                         "description": "Invalid request data",
                         "schema": {
-                            "$ref": "#/definitions/github_com_yi-tech_go-user-service_internal_transport_http_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     },
                     "409": {
                         "description": "Email already exists",
                         "schema": {
-                            "$ref": "#/definitions/github_com_yi-tech_go-user-service_internal_transport_http_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     },
                     "500": {
                         "description": "Internal server error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_yi-tech_go-user-service_internal_transport_http_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     }
                 }
@@ -346,13 +455,13 @@ const docTemplate = `{
                         "schema": {
                             "allOf": [
                                 {
-                                    "$ref": "#/definitions/github_com_yi-tech_go-user-service_internal_transport_http_response.Response"
+                                    "$ref": "#/definitions/response.Response"
                                 },
                                 {
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/internal_transport_http_user.UserResponse"
+                                            "$ref": "#/definitions/user.UserResponse"
                                         }
                                     }
                                 }
@@ -362,19 +471,19 @@ const docTemplate = `{
                     "400": {
                         "description": "Invalid user ID format",
                         "schema": {
-                            "$ref": "#/definitions/github_com_yi-tech_go-user-service_internal_transport_http_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     },
                     "404": {
                         "description": "User not found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_yi-tech_go-user-service_internal_transport_http_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     },
                     "500": {
                         "description": "Internal server error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_yi-tech_go-user-service_internal_transport_http_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     }
                 }
@@ -405,7 +514,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/internal_transport_http_user.UserUpdateRequest"
+                            "$ref": "#/definitions/user.UserUpdateRequest"
                         }
                     }
                 ],
@@ -415,13 +524,13 @@ const docTemplate = `{
                         "schema": {
                             "allOf": [
                                 {
-                                    "$ref": "#/definitions/github_com_yi-tech_go-user-service_internal_transport_http_response.Response"
+                                    "$ref": "#/definitions/response.Response"
                                 },
                                 {
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/internal_transport_http_user.UserResponse"
+                                            "$ref": "#/definitions/user.UserResponse"
                                         }
                                     }
                                 }
@@ -431,19 +540,19 @@ const docTemplate = `{
                     "400": {
                         "description": "Invalid request data or user ID format",
                         "schema": {
-                            "$ref": "#/definitions/github_com_yi-tech_go-user-service_internal_transport_http_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     },
                     "404": {
                         "description": "User not found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_yi-tech_go-user-service_internal_transport_http_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     },
                     "500": {
                         "description": "Internal server error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_yi-tech_go-user-service_internal_transport_http_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     }
                 }
@@ -473,32 +582,32 @@ const docTemplate = `{
                     "200": {
                         "description": "User deleted successfully",
                         "schema": {
-                            "$ref": "#/definitions/github_com_yi-tech_go-user-service_internal_transport_http_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     },
                     "400": {
                         "description": "Invalid user ID format",
                         "schema": {
-                            "$ref": "#/definitions/github_com_yi-tech_go-user-service_internal_transport_http_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     },
                     "404": {
                         "description": "User not found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_yi-tech_go-user-service_internal_transport_http_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     },
                     "500": {
                         "description": "Internal server error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_yi-tech_go-user-service_internal_transport_http_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     }
                 }
             }
         },
         "/users/{id}/password": {
-            "put": {
+            "patch": {
                 "description": "Update a user's password",
                 "consumes": [
                     "application/json"
@@ -532,31 +641,31 @@ const docTemplate = `{
                     "200": {
                         "description": "Password updated successfully",
                         "schema": {
-                            "$ref": "#/definitions/github_com_yi-tech_go-user-service_internal_transport_http_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     },
                     "400": {
                         "description": "Invalid request data or user ID format",
                         "schema": {
-                            "$ref": "#/definitions/github_com_yi-tech_go-user-service_internal_transport_http_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     },
                     "401": {
                         "description": "Current password is incorrect",
                         "schema": {
-                            "$ref": "#/definitions/github_com_yi-tech_go-user-service_internal_transport_http_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     },
                     "404": {
                         "description": "User not found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_yi-tech_go-user-service_internal_transport_http_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     },
                     "500": {
                         "description": "Internal server error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_yi-tech_go-user-service_internal_transport_http_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     }
                 }
@@ -564,14 +673,17 @@ const docTemplate = `{
         }
     },
     "definitions": {
-        "github_com_yi-tech_go-user-service_internal_transport_http_response.Response": {
+        "auth.LoginResponse": {
             "type": "object",
             "properties": {
-                "code": {
+                "access_token": {
+                    "type": "string"
+                },
+                "expires_in": {
+                    "description": "Access token expiry time in seconds",
                     "type": "integer"
                 },
-                "data": {},
-                "message": {
+                "refresh_token": {
                     "type": "string"
                 }
             }
@@ -587,21 +699,6 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "password": {
-                    "type": "string"
-                }
-            }
-        },
-        "internal_transport_http_auth.LoginResponse": {
-            "type": "object",
-            "properties": {
-                "access_token": {
-                    "type": "string"
-                },
-                "expires_in": {
-                    "description": "Access token expiry time in seconds",
-                    "type": "integer"
-                },
-                "refresh_token": {
                     "type": "string"
                 }
             }
@@ -633,7 +730,33 @@ const docTemplate = `{
                 }
             }
         },
-        "internal_transport_http_user.UserRegisterRequest": {
+        "response.Response": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "type": "integer"
+                },
+                "data": {},
+                "message": {
+                    "type": "string"
+                }
+            }
+        },
+        "user.UpdateCurrentUserProfileRequest": {
+            "type": "object",
+            "properties": {
+                "email": {
+                    "type": "string"
+                },
+                "first_name": {
+                    "type": "string"
+                },
+                "last_name": {
+                    "type": "string"
+                }
+            }
+        },
+        "user.UserRegisterRequest": {
             "type": "object",
             "required": [
                 "email",
@@ -657,7 +780,7 @@ const docTemplate = `{
                 }
             }
         },
-        "internal_transport_http_user.UserResponse": {
+        "user.UserResponse": {
             "type": "object",
             "properties": {
                 "created_at": {
@@ -680,7 +803,7 @@ const docTemplate = `{
                 }
             }
         },
-        "internal_transport_http_user.UserUpdateRequest": {
+        "user.UserUpdateRequest": {
             "type": "object",
             "properties": {
                 "email": {

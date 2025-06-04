@@ -9,11 +9,14 @@ import (
 	"github.com/dgrijalva/jwt-go/v4"
 	"github.com/go-redis/redis/v8"
 	"github.com/google/uuid"
-	"golang.org/x/crypto/bcrypt"
+	// "golang.org/x/crypto/bcrypt" // No longer used directly
 
 	"github.com/yi-tech/go-user-service/internal/config"
+	"strings" // Added for strings.Contains
+
 	domainAuth "github.com/yi-tech/go-user-service/internal/domain/auth"
 	domainUser "github.com/yi-tech/go-user-service/internal/domain/user"
+	userService "github.com/yi-tech/go-user-service/internal/service/user" // For user.ErrUserNotFound
 )
 
 // Service implements the domainAuth.AuthService interface
@@ -37,21 +40,21 @@ func (s *Service) Login(ctx context.Context, email, password string) (*domainAut
 	// Find user by email
 	user, err := s.userService.GetByEmail(ctx, email)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get user by email: %w", err)
+		if errors.Is(err, userService.ErrUserNotFound) {
+			return nil, ErrInvalidCredentials // User not found by email
+		}
+		// For other errors from GetByEmail
+		return nil, fmt.Errorf("error retrieving user by email for login: %w", err)
 	}
-
-	// Check if user exists
+	// If we reach here, user should not be nil if GetByEmail contract is (*User, ErrUserNotFound) or (*User, nil)
+	// Adding a safeguard, though ideally GetByEmail guarantees non-nil user if err is nil.
 	if user == nil {
-		return nil, errors.New("invalid credentials")
+	    return nil, ErrInvalidCredentials // Should be unreachable if GetByEmail is consistent
 	}
 
 	// Verify password
-	err = bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(password))
-	if err != nil {
-		if errors.Is(err, bcrypt.ErrMismatchedHashAndPassword) {
-			return nil, errors.New("invalid credentials")
-		}
-		return nil, fmt.Errorf("failed to compare password hash: %w", err)
+	if !user.CheckPassword(password) {
+		return nil, ErrInvalidCredentials // Password incorrect
 	}
 
 	// Generate JWT access token
@@ -92,8 +95,8 @@ func (s *Service) RefreshToken(ctx context.Context, refreshToken string) (*domai
 	// Get user ID from the refresh token
 	userID, err := s.authRepo.GetUserIDByRefreshToken(ctx, refreshToken) // userID is now uuid.UUID
 	if err != nil {
-		if err == redis.Nil {
-			return nil, errors.New("invalid or expired refresh token")
+		if errors.Is(err, redis.Nil) {
+			return nil, ErrInvalidOrExpiredToken
 		}
 		return nil, fmt.Errorf("failed to get user ID from refresh token: %w", err)
 	}
@@ -101,7 +104,11 @@ func (s *Service) RefreshToken(ctx context.Context, refreshToken string) (*domai
 	// Get user details
 	user, err := s.userService.GetByID(ctx, userID) // Pass uuid.UUID directly
 	if err != nil {
-		return nil, fmt.Errorf("failed to get user by ID: %w", err)
+		if errors.Is(err, userService.ErrUserNotFound) {
+			// If user associated with refresh token is not found, token is effectively invalid
+			return nil, ErrInvalidOrExpiredToken
+		}
+		return nil, fmt.Errorf("failed to get user by ID for refresh token: %w", err)
 	}
 
 	// Generate new JWT access token
@@ -184,29 +191,59 @@ func (s *Service) ValidateToken(ctx context.Context, tokenString string) (uuid.U
 	})
 
 	if err != nil {
-		return uuid.Nil, fmt.Errorf("failed to parse token: %w", err)
+		// Check for specific JWT errors that indicate an invalid token
+		// WORKAROUND: Due to issues resolving jwt.ValidationError constants in the build environment,
+		// we are checking error strings. This is fragile and should be replaced with constant checks
+		// if the environment/dependency issue is resolved.
+		// Common error messages from dgrijalva/jwt-go:
+		// "token is expired", "token is not valid yet", "token is malformed", "signature is invalid"
+
+		if strings.Contains(err.Error(), "token is malformed") {
+			return uuid.Nil, ErrInvalidToken
+		}
+		if strings.Contains(err.Error(), "token is expired") {
+			return uuid.Nil, ErrInvalidToken // Or a more specific "expired token" error
+		}
+		if strings.Contains(err.Error(), "token is not valid yet") {
+			return uuid.Nil, ErrInvalidToken // Or a more specific "token not yet valid" error
+		}
+		if strings.Contains(err.Error(), "signature is invalid") {
+			return uuid.Nil, ErrInvalidToken
+		}
+		// The following block is removed due to persistent 'undefined: jwt.ValidationError'
+		// var jwtErr *jwt.ValidationError
+		// if errors.As(err, &jwtErr) {
+		// // If it's a ValidationError, but not caught by specific string checks above,
+		// // treat as generic invalid token. The constants are problematic in this env.
+		// return uuid.Nil, ErrInvalidToken
+		// }
+		// If none of the specific string checks caught the error, it might be another type of JWT error or a non-JWT error.
+		// We'll rely on the fact that if token.Valid is false later, it will be caught.
+		// For errors during parsing not caught by string checks, we'll return a generic parse error.
+		// This makes the string checks the primary filter for known JWT issue types.
+		return uuid.Nil, fmt.Errorf("failed to parse token (unhandled type or non-JWT error): %w", err)
 	}
 
 	// Validate the token
 	if !token.Valid {
-		return uuid.Nil, errors.New("invalid token")
+		return uuid.Nil, ErrInvalidToken
 	}
 
 	// Extract claims
 	claims, ok := token.Claims.(jwt.MapClaims)
 	if !ok {
-		return uuid.Nil, errors.New("invalid token claims")
+		return uuid.Nil, ErrInvalidToken // Invalid claims structure
 	}
 
 	// Extract user ID from claims
 	userIDStr, ok := claims["user_id"].(string)
 	if !ok {
-		return uuid.Nil, errors.New("user_id claim is not a string")
+		return uuid.Nil, ErrInvalidToken // user_id claim missing or not a string
 	}
 
 	parsedUserID, err := uuid.Parse(userIDStr)
 	if err != nil {
-		return uuid.Nil, fmt.Errorf("failed to parse user_id claim to UUID: %w", err)
+		return uuid.Nil, ErrInvalidToken // user_id claim is not a valid UUID
 	}
 
 	return parsedUserID, nil
