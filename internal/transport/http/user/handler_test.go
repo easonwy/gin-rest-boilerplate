@@ -262,21 +262,21 @@ func TestUpdateUser(t *testing.T) {
 				assert.True(t, ok, "data should be present in response")
 
 				// Check that updated_at is present and not empty
-				updatedAt, ok := data["updated_at"].(string)
-				assert.True(t, ok, "updated_at should be present in response data")
-				assert.NotEmpty(t, updatedAt, "updated_at should not be empty")
+				updatedAt, ok := data["updatedAt"].(string)
+				assert.True(t, ok, "updatedAt should be present in response data")
+				assert.NotEmpty(t, updatedAt, "updatedAt should not be empty")
 
 				// Remove updated_at for comparison
-				delete(data, "updated_at")
+				delete(data, "updatedAt")
 
 				// Check the fields we care about
 				assert.Equal(t, mockUserUUID.String(), data["id"])
 				assert.Equal(t, "original@example.com", data["email"])
-				assert.Equal(t, "UpdatedFirst", data["first_name"])
-				assert.Equal(t, "UpdatedLast", data["last_name"])
+				assert.Equal(t, "UpdatedFirst", data["firstName"])
+				assert.Equal(t, "UpdatedLast", data["lastName"])
 				// Just verify created_at is a valid RFC3339 timestamp
-				_, err = time.Parse(time.RFC3339, data["created_at"].(string))
-				assert.NoError(t, err, "created_at should be a valid RFC3339 timestamp")
+				_, err = time.Parse(time.RFC3339, data["createdAt"].(string))
+				assert.NoError(t, err, "createdAt should be a valid RFC3339 timestamp")
 			} else {
 				assert.JSONEq(t, tc.expectedBody, rr.Body.String())
 			}

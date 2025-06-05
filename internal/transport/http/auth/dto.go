@@ -8,12 +8,12 @@ type LoginRequest struct {
 
 // LoginResponse defines the user login response structure
 type LoginResponse struct {
-	AccessToken  string `json:"access_token"`
-	RefreshToken string `json:"refresh_token"`
-	ExpiresIn    int64  `json:"expires_in"` // Access token expiry time in seconds
+	AccessToken  string `json:"accessToken"`
+	RefreshToken string `json:"refreshToken"`
+	ExpiresIn    int64  `json:"expiresIn"` // Access token expiry time in seconds
 }
 
 // RefreshTokenRequest defines the refresh token request structure
 type RefreshTokenRequest struct {
-	RefreshToken string `json:"refresh_token" binding:"required"`
+	RefreshToken string `json:"refreshToken" binding:"required"`
 }

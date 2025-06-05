@@ -1,7 +1,5 @@
 module github.com/yi-tech/go-user-service
 
-replace github.com/yi-tech/go-user-service => /Users/easonwu/Dev/personal/go-user-service
-
 replace github.com/yi-tech/go-user-service/api/proto => ./api/proto
 
 go 1.23.0

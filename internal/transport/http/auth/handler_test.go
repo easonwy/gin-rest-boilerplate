@@ -102,7 +102,7 @@ func TestLogin(t *testing.T) {
 				mockService.On("Login", mock.Anything, domainAuth.LoginInput{Email: "test@example.com", Password: "password"}).Return(mockTokenPair, nil)
 			},
 			expectedStatus: http.StatusOK,
-			expectedBody:   `{"code":200,"message":"Success","data":{"access_token":"mock-access-token","refresh_token":"mock-refresh-token","expires_in":3600}}`,
+			expectedBody:   `{"code":200,"message":"Success","data":{"accessToken":"mock-access-token","refreshToken":"mock-refresh-token","expiresIn":3600}}`,
 		},
 		{
 			name:           "Invalid Request Data - Bad JSON",
@@ -192,12 +192,12 @@ func TestRefreshToken(t *testing.T) {
 	}{
 		{
 			name: "Success",
-			body: gin.H{"refresh_token": "valid-refresh-token"},
+			body: gin.H{"refreshToken": "valid-refresh-token"},
 			setupMock: func(mockService *MockAuthService) {
 				mockService.On("RefreshToken", mock.AnythingOfType("*gin.Context"), "valid-refresh-token").Return(mockTokenPair, nil)
 			},
 			expectedStatus: http.StatusOK,
-			expectedBody:   `{"code":200,"message":"Success","data":{"access_token":"mock-access-token","refresh_token":"mock-refresh-token","expires_in":3600}}`,
+			expectedBody:   `{"code":200,"message":"Success","data":{"accessToken":"mock-access-token","refreshToken":"mock-refresh-token","expiresIn":3600}}`,
 		},
 		{
 			name:           "Invalid Request Data - Bad JSON",
@@ -217,7 +217,7 @@ func TestRefreshToken(t *testing.T) {
 		},
 		{
 			name: "Invalid or Expired Token",
-			body: gin.H{"refresh_token": "invalid-token"},
+			body: gin.H{"refreshToken": "invalid-token"},
 			setupMock: func(mockService *MockAuthService) {
 				// Use the actual sentinel error
 				mockService.On("RefreshToken", mock.AnythingOfType("*gin.Context"), "invalid-token").Return(nil, serviceAuth.ErrInvalidOrExpiredToken)
@@ -228,7 +228,7 @@ func TestRefreshToken(t *testing.T) {
 		},
 		{
 			name: "Internal Server Error on Refresh",
-			body: gin.H{"refresh_token": "error-token"},
+			body: gin.H{"refreshToken": "error-token"},
 			setupMock: func(mockService *MockAuthService) {
 				mockService.On("RefreshToken", mock.AnythingOfType("*gin.Context"), "error-token").Return(nil, errors.New("database error"))
 			},

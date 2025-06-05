@@ -33,14 +33,12 @@ func NewUserServer(userService serviceUser.UserService, logger *zap.Logger) *Use
 func (s *UserServer) Register(ctx context.Context, req *userpb.RegisterRequest) (*userpb.UserResponse, error) {
 	s.logger.Info("Register request received", zap.String("email", req.Email))
 
-	// Populate RegisterUserInput
 	userInput := domainUser.RegisterUserInput{
 		Email:     req.Email,
 		Password:  req.Password,
 		FirstName: req.FirstName,
 		LastName:  req.LastName,
 	}
-
 	// Call the user service to register the user
 	user, err := s.userService.Register(ctx, userInput)
 	if err != nil {
@@ -112,18 +110,16 @@ func (s *UserServer) UpdateProfile(ctx context.Context, req *userpb.UpdateProfil
 		return nil, status.Errorf(codes.InvalidArgument, "invalid user ID format: %v", err)
 	}
 
-	// Create UpdateUserParams
-	params := domainUser.UpdateUserParams{
+	updateParams := domainUser.UpdateUserParams{
 		FirstName: req.FirstName,
 		LastName:  req.LastName,
-		// Email field remains empty as per requirement, it's not part of UpdateProfileRequest
+		Email:     req.Email, // Assuming UpdateProfileRequest has Email
 	}
-
 	// Call the user service to update the user profile
-	user, err := s.userService.Update(ctx, id, params)
+	user, err := s.userService.Update(ctx, id, updateParams)
 	if err != nil {
 		s.logger.Error("Update user profile failed", zap.Error(err))
-		// TODO: Handle specific errors like ErrUserNotFound or ErrEmailInUse if necessary
+		// Consider handling specific errors from service.Update, e.g., ErrUserNotFound, ErrEmailInUse
 		return nil, status.Errorf(codes.Internal, "update user profile failed: %v", err)
 	}
 
