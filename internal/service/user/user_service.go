@@ -14,16 +14,13 @@ import (
 // UserService defines the interface for user-related business logic.
 type UserService interface {
 	// Register creates a new user
-	Register(ctx context.Context, email, password, firstName, lastName string) (*domainUser.User, error)
+	Register(ctx context.Context, input RegisterUserInput) (*domainUser.User, error)
 
 	// GetByID retrieves a user by ID
 	GetByID(ctx context.Context, id uuid.UUID) (*domainUser.User, error)
 
 	// GetByEmail retrieves a user by email
 	GetByEmail(ctx context.Context, email string) (*domainUser.User, error)
-
-	// UpdateUser updates user details
-	UpdateUser(ctx context.Context, id uuid.UUID, firstName, lastName string) (*domainUser.User, error)
 
 	// Update updates user details with the provided parameters
 	Update(ctx context.Context, id uuid.UUID, params domainUser.UpdateUserParams) (*domainUser.User, error)
@@ -45,9 +42,9 @@ func NewUserService(userRepo domainUser.Repository) UserService {
 }
 
 // Register creates a new user with the provided credentials
-func (s *userService) Register(ctx context.Context, email, password, firstName, lastName string) (*domainUser.User, error) {
+func (s *userService) Register(ctx context.Context, input RegisterUserInput) (*domainUser.User, error) {
 	// Check if user already exists
-	existingUser, err := s.userRepo.GetByEmail(ctx, email)
+	existingUser, err := s.userRepo.GetByEmail(ctx, input.Email)
 	if err != nil {
 		// If GORM's record not found, it's not an error for this check, means email is available
 		if !errors.Is(err, gorm.ErrRecordNotFound) {
@@ -62,11 +59,11 @@ func (s *userService) Register(ctx context.Context, email, password, firstName, 
 	// Create new user
 	user := &domainUser.User{
 		ID:        uuid.New(),
-		Username:  email, // Set username to email to satisfy the not-null constraint
-		Email:     email,
-		Password:  password,
-		FirstName: firstName,
-		LastName:  lastName,
+		Username:  input.Email, // Set username to email to satisfy the not-null constraint
+		Email:     input.Email,
+		Password:  input.Password,
+		FirstName: input.FirstName,
+		LastName:  input.LastName,
 		CreatedAt: time.Now(),
 		UpdatedAt: time.Now(),
 	}
@@ -108,28 +105,6 @@ func (s *userService) GetByID(ctx context.Context, id uuid.UUID) (*domainUser.Us
 		return nil, ErrUserNotFound
 	}
 	return user, nil
-}
-
-func (s *userService) UpdateUser(ctx context.Context, id uuid.UUID, firstName, lastName string) (*domainUser.User, error) {
-	// Get existing user
-	existingUser, err := s.userRepo.GetByID(ctx, id)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get user for update: %w", err)
-	}
-	if existingUser == nil {
-		return nil, ErrUserNotFound
-	}
-
-	// Update fields
-	existingUser.FirstName = firstName
-	existingUser.LastName = lastName
-
-	// Update user
-	if err := s.userRepo.Update(ctx, existingUser); err != nil {
-		return nil, fmt.Errorf("failed to update user: %w", err)
-	}
-
-	return existingUser, nil
 }
 
 func (s *userService) Update(ctx context.Context, id uuid.UUID, params domainUser.UpdateUserParams) (*domainUser.User, error) {

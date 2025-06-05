@@ -48,8 +48,16 @@ func (h *Handler) Register(c *gin.Context) {
 		return
 	}
 
-	// Call domain service with direct parameters
-	newUser, err := h.userService.Register(c.Request.Context(), req.Email, req.Password, req.FirstName, req.LastName)
+	// Populate RegisterUserInput from the request
+	userInput := realServiceUser.RegisterUserInput{
+		Email:     req.Email,
+		Password:  req.Password,
+		FirstName: req.FirstName,
+		LastName:  req.LastName,
+	}
+
+	// Call domain service with the new input struct
+	newUser, err := h.userService.Register(c.Request.Context(), userInput)
 	if err != nil {
 		if errors.Is(err, realServiceUser.ErrUserAlreadyExists) {
 			// No need to log ErrUserAlreadyExists as error, it's a known business logic case

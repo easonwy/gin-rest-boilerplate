@@ -77,7 +77,13 @@ func TestRegister(t *testing.T) {
 		// Mock Create to succeed
 		mockRepo.On("Create", ctx, mock.AnythingOfType("*user.User")).Return(nil).Once()
 
-		createdUser, err := userService.Register(ctx, testUser.Email, testUser.Password, testUser.FirstName, testUser.LastName)
+		userInput := RegisterUserInput{
+			Email:     testUser.Email,
+			Password:  testUser.Password,
+			FirstName: testUser.FirstName,
+			LastName:  testUser.LastName,
+		}
+		createdUser, err := userService.Register(ctx, userInput)
 
 		assert.NoError(t, err)
 		assert.NotNil(t, createdUser)
@@ -91,7 +97,13 @@ func TestRegister(t *testing.T) {
 		existingUser := newTestUser("exists@example.com", "password123", "Existing", "User")
 		mockRepo.On("GetByEmail", ctx, existingUser.Email).Return(existingUser, nil).Once() // User found
 
-		createdUser, err := userService.Register(ctx, existingUser.Email, "newpass", "New", "User")
+		userInput := RegisterUserInput{
+			Email:     existingUser.Email,
+			Password:  "newpass",
+			FirstName: "New",
+			LastName:  "User",
+		}
+		createdUser, err := userService.Register(ctx, userInput)
 
 		assert.Error(t, err)
 		assert.Nil(t, createdUser)
@@ -102,7 +114,13 @@ func TestRegister(t *testing.T) {
 	t.Run("Repository Error on GetByEmail", func(t *testing.T) {
 		mockRepo.On("GetByEmail", ctx, "error@example.com").Return(nil, errors.New("db error on get")).Once()
 
-		createdUser, err := userService.Register(ctx, "error@example.com", "password", "Error", "User")
+		userInput := RegisterUserInput{
+			Email:     "error@example.com",
+			Password:  "password",
+			FirstName: "Error",
+			LastName:  "User",
+		}
+		createdUser, err := userService.Register(ctx, userInput)
 
 		assert.Error(t, err)
 		assert.Nil(t, createdUser)
@@ -114,7 +132,13 @@ func TestRegister(t *testing.T) {
 		mockRepo.On("GetByEmail", ctx, "createfail@example.com").Return(nil, gorm.ErrRecordNotFound).Once()
 		mockRepo.On("Create", ctx, mock.AnythingOfType("*user.User")).Return(errors.New("db error on create")).Once()
 
-		createdUser, err := userService.Register(ctx, "createfail@example.com", "password", "CreateFail", "User")
+		userInput := RegisterUserInput{
+			Email:     "createfail@example.com",
+			Password:  "password",
+			FirstName: "CreateFail",
+			LastName:  "User",
+		}
+		createdUser, err := userService.Register(ctx, userInput)
 
 		assert.Error(t, err)
 		assert.Nil(t, createdUser)

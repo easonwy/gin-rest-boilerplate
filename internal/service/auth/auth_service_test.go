@@ -28,8 +28,8 @@ type MockUserService struct {
 	mock.Mock
 }
 
-func (m *MockUserService) Register(ctx context.Context, email, password, firstName, lastName string) (*domainUser.User, error) {
-	args := m.Called(ctx, email, password, firstName, lastName)
+func (m *MockUserService) Register(ctx context.Context, input userService.RegisterUserInput) (*domainUser.User, error) {
+	args := m.Called(ctx, input)
 	if args.Get(0) == nil {
 		return nil, args.Error(1)
 	}
@@ -46,14 +46,6 @@ func (m *MockUserService) GetByID(ctx context.Context, id uuid.UUID) (*domainUse
 
 func (m *MockUserService) GetByEmail(ctx context.Context, email string) (*domainUser.User, error) {
 	args := m.Called(ctx, email)
-	if args.Get(0) == nil {
-		return nil, args.Error(1)
-	}
-	return args.Get(0).(*domainUser.User), args.Error(1)
-}
-
-func (m *MockUserService) UpdateUser(ctx context.Context, id uuid.UUID, firstName, lastName string) (*domainUser.User, error) {
-	args := m.Called(ctx, id, firstName, lastName)
 	if args.Get(0) == nil {
 		return nil, args.Error(1)
 	}
@@ -153,7 +145,8 @@ func TestLogin(t *testing.T) {
 		mockAuthRepo.On("SetRefreshTokenUserID", ctx, mock.AnythingOfType("string"), user.ID, mock.AnythingOfType("time.Duration")).Return(nil).Once()
 
 		var tokenPair *domainAuth.TokenPair // Explicitly type
-		tokenPair, err := authService.Login(ctx, email, correctPassword)
+		loginInput := domainAuth.LoginInput{Email: email, Password: correctPassword}
+		tokenPair, err := authService.Login(ctx, loginInput)
 
 		assert.NoError(t, err)
 		assert.NotNil(t, tokenPair)
@@ -166,7 +159,8 @@ func TestLogin(t *testing.T) {
 	t.Run("User Not Found by GetByEmail", func(t *testing.T) {
 		mockUserSvc.On("GetByEmail", ctx, email).Return(nil, userService.ErrUserNotFound).Once()
 
-		tokenPair, err := authService.Login(ctx, email, correctPassword)
+		loginInput := domainAuth.LoginInput{Email: email, Password: correctPassword}
+		tokenPair, err := authService.Login(ctx, loginInput)
 
 		assert.Error(t, err)
 		assert.Nil(t, tokenPair)
@@ -178,7 +172,8 @@ func TestLogin(t *testing.T) {
 		dbError := errors.New("some db error")
 		mockUserSvc.On("GetByEmail", ctx, email).Return(nil, dbError).Once()
 
-		tokenPair, err := authService.Login(ctx, email, correctPassword)
+		loginInput := domainAuth.LoginInput{Email: email, Password: correctPassword}
+		tokenPair, err := authService.Login(ctx, loginInput)
 
 		assert.Error(t, err)
 		assert.Nil(t, tokenPair)
@@ -189,7 +184,8 @@ func TestLogin(t *testing.T) {
 	t.Run("Incorrect Password", func(t *testing.T) {
 		mockUserSvc.On("GetByEmail", ctx, email).Return(user, nil).Once() // User found
 
-		tokenPair, err := authService.Login(ctx, email, "wrongPassword")
+		loginInput := domainAuth.LoginInput{Email: email, Password: "wrongPassword"}
+		tokenPair, err := authService.Login(ctx, loginInput)
 
 		assert.Error(t, err)
 		assert.Nil(t, tokenPair)
@@ -203,7 +199,8 @@ func TestLogin(t *testing.T) {
 		mockAuthRepo.On("SetUserRefreshToken", ctx, user.ID, mock.AnythingOfType("string"), mock.AnythingOfType("time.Duration")).Return(repoError).Once()
 		// SetRefreshTokenUserID might not be called if SetUserRefreshToken fails
 
-		tokenPair, err := authService.Login(ctx, email, correctPassword)
+		loginInput := domainAuth.LoginInput{Email: email, Password: correctPassword}
+		tokenPair, err := authService.Login(ctx, loginInput)
 
 		assert.Error(t, err)
 		assert.Nil(t, tokenPair)
@@ -218,7 +215,8 @@ func TestLogin(t *testing.T) {
 		mockAuthRepo.On("SetUserRefreshToken", ctx, user.ID, mock.AnythingOfType("string"), mock.AnythingOfType("time.Duration")).Return(nil).Once()
 		mockAuthRepo.On("SetRefreshTokenUserID", ctx, mock.AnythingOfType("string"), user.ID, mock.AnythingOfType("time.Duration")).Return(repoError).Once()
 
-		tokenPair, err := authService.Login(ctx, email, correctPassword)
+		loginInput := domainAuth.LoginInput{Email: email, Password: correctPassword}
+		tokenPair, err := authService.Login(ctx, loginInput)
 
 		assert.Error(t, err)
 		assert.Nil(t, tokenPair)
@@ -259,8 +257,8 @@ func TestRefreshToken(t *testing.T) {
 		mockAuthRepo.AssertExpectations(t)
 	})
 
-	t.Run("GetUserIDByRefreshToken returns redis.Nil", func(t *testing.T) {
-		mockAuthRepo.On("GetUserIDByRefreshToken", ctx, refreshToken).Return(uuid.Nil, redis.Nil).Once()
+	t.Run("Token Not Found in Repo - GetUserIDByRefreshToken returns (uuid.Nil, nil)", func(t *testing.T) {
+		mockAuthRepo.On("GetUserIDByRefreshToken", ctx, refreshToken).Return(uuid.Nil, nil).Once()
 
 		tokenPair, err := authService.RefreshToken(ctx, refreshToken)
 
