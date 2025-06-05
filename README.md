@@ -1,4 +1,4 @@
-# Go 用户授权微服务
+# Go 用户授权微服务 - Gin Rest Boilerplate
 
 ## 项目目标
 
