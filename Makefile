@@ -89,8 +89,12 @@ proto-install:
 
 # Clean generated protobuf files
 proto-clean:
-	rm -rf $(PROTO_OUT)/*
-	rm -rf $(SWAGGER_OUT)/*
+	@echo "Cleaning generated protobuf Go files from api/proto..."
+	find $(PROTO_DIR) -name '*.pb.go' -type f -delete
+	find $(PROTO_DIR) -name '*.pb.gw.go' -type f -delete
+	find $(PROTO_DIR) -name '*_grpc.pb.go' -type f -delete
+	@echo "Cleaning generated swagger files from docs/swagger..."
+	rm -rf ./docs/swagger/*
 
 # Generate protobuf code and swagger docs
 proto-gen: proto-clean

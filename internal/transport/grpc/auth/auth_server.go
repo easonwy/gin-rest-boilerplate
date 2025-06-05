@@ -45,12 +45,10 @@ func (s *AuthServer) Login(ctx context.Context, req *authpb.LoginRequest) (*auth
 		return nil, status.Errorf(codes.InvalidArgument, "password is required")
 	}
 
-	// Create domainAuth.LoginInput from the request
 	loginInput := domainAuth.LoginInput{
 		Email:    req.Email,
 		Password: req.Password,
 	}
-
 	// Call the auth service to authenticate the user
 	tokenPair, err := s.authService.Login(ctx, loginInput)
 	if err != nil {

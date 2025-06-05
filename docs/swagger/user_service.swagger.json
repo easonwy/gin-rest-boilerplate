@@ -1,12 +1,12 @@
 {
   "swagger": "2.0",
   "info": {
-    "title": "user/v1/user.proto",
+    "title": "auth/auth.proto",
     "version": "version not set"
   },
   "tags": [
     {
-      "name": "UserService"
+      "name": "AuthService"
     }
   ],
   "consumes": [
@@ -15,185 +15,31 @@
   "produces": [
     "application/json"
   ],
-  "paths": {
-    "/v1/auth/login": {
-      "post": {
-        "summary": "Login a user",
-        "operationId": "UserService_Login",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/v1LoginResponse"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "body",
-            "in": "body",
-            "required": true,
-            "schema": {
-              "$ref": "#/definitions/v1LoginRequest"
-            }
-          }
-        ],
-        "tags": [
-          "UserService"
-        ]
-      }
-    },
-    "/v1/auth/register": {
-      "post": {
-        "summary": "Register a new user",
-        "operationId": "UserService_Register",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/v1UserResponse"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "body",
-            "in": "body",
-            "required": true,
-            "schema": {
-              "$ref": "#/definitions/v1RegisterRequest"
-            }
-          }
-        ],
-        "tags": [
-          "UserService"
-        ]
-      }
-    },
-    "/v1/users/{id}": {
-      "get": {
-        "summary": "Get user profile",
-        "operationId": "UserService_GetProfile",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/v1UserResponse"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "id",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          }
-        ],
-        "tags": [
-          "UserService"
-        ]
-      },
-      "delete": {
-        "summary": "Delete user",
-        "operationId": "UserService_DeleteUser",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/v1DeleteUserResponse"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "id",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          }
-        ],
-        "tags": [
-          "UserService"
-        ]
-      },
-      "put": {
-        "summary": "Update user profile",
-        "operationId": "UserService_UpdateProfile",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/v1UserResponse"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "id",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "body",
-            "in": "body",
-            "required": true,
-            "schema": {
-              "$ref": "#/definitions/UserServiceUpdateProfileBody"
-            }
-          }
-        ],
-        "tags": [
-          "UserService"
-        ]
-      }
-    }
-  },
+  "paths": {},
   "definitions": {
-    "UserServiceUpdateProfileBody": {
+    "authTokenResponse": {
       "type": "object",
       "properties": {
-        "first_name": {
+        "accessToken": {
           "type": "string"
         },
-        "last_name": {
-          "type": "string"
-        },
-        "email": {
+        "refreshToken": {
           "type": "string"
         }
-      }
+      },
+      "title": "TokenResponse is the response containing tokens"
+    },
+    "authValidateTokenResponse": {
+      "type": "object",
+      "properties": {
+        "valid": {
+          "type": "boolean"
+        },
+        "userId": {
+          "type": "string"
+        }
+      },
+      "title": "ValidateTokenResponse is the response for token validation"
     },
     "protobufAny": {
       "type": "object",
@@ -223,58 +69,7 @@
         }
       }
     },
-    "v1DeleteUserResponse": {
-      "type": "object",
-      "properties": {
-        "success": {
-          "type": "boolean"
-        }
-      }
-    },
-    "v1LoginRequest": {
-      "type": "object",
-      "properties": {
-        "email": {
-          "type": "string"
-        },
-        "password": {
-          "type": "string"
-        }
-      }
-    },
-    "v1LoginResponse": {
-      "type": "object",
-      "properties": {
-        "access_token": {
-          "type": "string"
-        },
-        "refresh_token": {
-          "type": "string"
-        },
-        "user": {
-          "$ref": "#/definitions/v1User"
-        }
-      }
-    },
-    "v1RegisterRequest": {
-      "type": "object",
-      "properties": {
-        "email": {
-          "type": "string"
-        },
-        "password": {
-          "type": "string"
-        },
-        "first_name": {
-          "type": "string"
-        },
-        "last_name": {
-          "type": "string"
-        }
-      },
-      "title": "Requests and Responses"
-    },
-    "v1User": {
+    "userUser": {
       "type": "object",
       "properties": {
         "id": {
@@ -283,33 +78,22 @@
         "email": {
           "type": "string"
         },
-        "first_name": {
+        "firstName": {
           "type": "string"
         },
-        "last_name": {
+        "lastName": {
           "type": "string"
         },
-        "is_active": {
-          "type": "boolean"
-        },
-        "created_at": {
+        "createdAt": {
           "type": "string",
           "format": "date-time"
         },
-        "updated_at": {
+        "updatedAt": {
           "type": "string",
           "format": "date-time"
         }
       },
-      "title": "User message represents a user in the system"
-    },
-    "v1UserResponse": {
-      "type": "object",
-      "properties": {
-        "user": {
-          "$ref": "#/definitions/v1User"
-        }
-      }
+      "title": "User represents a user in the system"
     }
   }
 }
