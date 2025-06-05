@@ -21,11 +21,12 @@
 ## 技术选型
 
 *   **Web 框架**: Gin
+*   **RPC 框架**: gRPC
 *   **数据库**: PostgreSQL
 *   **缓存**: Redis
 *   **认证**: JWT
 *   **依赖注入**: Wire
-*   **配置管理**: Viper 或其他
+*   **配置管理**: Viper
 *   **日志**: Zap
 *   **单元测试**: Go testing
 
@@ -34,18 +35,20 @@
 项目采用领域驱动设计 (DDD) 和清洁架构 (Clean Architecture) 原则，同时支持 HTTP 和 gRPC 接口。
 
 ```
+├── .github/             # GitHub Actions 工作流
 ├── api/
 │   ├── proto/           # Protocol Buffers 定义
 │   │   ├── auth/        # 认证服务 Proto 文件
 │   │   │   └── v1/      # v1 版本 API 定义
 │   │   └── user/        # 用户服务 Proto 文件
 │   │       └── v1/      # v1 版本 API 定义
-│   └── swagger/         # Swagger/OpenAPI 规范
 ├── cmd/
 │   └── server/          # 应用程序入口点
 │       ├── main.go
 │       └── wire/        # 依赖注入配置
 ├── configs/             # 配置文件
+├── docs/                # 文档
+│   └── swagger/         # Swagger/OpenAPI 规范
 ├── internal/            # 私有应用程序代码
 │   ├── domain/          # 领域模型和业务逻辑
 │   │   ├── auth/        # 认证领域模型
@@ -69,9 +72,8 @@
 ├── pkg/                 # 可被其他服务使用的公共库
 ├── migrations/          # 数据库迁移
 ├── scripts/             # 实用脚本
-│   ├── generate_proto.sh          # 生成 Proto 文件脚本
-│   ├── reorganize_structure.sh    # 重组项目结构脚本
-│   └── update_structure_imports.sh # 更新导入路径脚本
+│   ├── generate.sh      # 通用生成脚本
+│   └── generate_proto.sh # 生成 Proto 文件脚本
 ├── third_party/         # 外部依赖
 ├── go.mod
 ├── go.sum
@@ -124,7 +126,7 @@
 ./scripts/generate_proto.sh
 ```
 
-生成的代码将位于相应的 proto 目录中，Swagger 文档将生成在 `/api/swagger` 目录中。
+生成的代码将位于相应的 proto 目录中，Swagger 文档将生成在 `docs/swagger/` 目录中。
 
 #### 验证 gRPC API
 
@@ -136,10 +138,10 @@
 
    ```bash
    # 例如，获取用户信息
-   curl -X GET "http://localhost:8081/api/v1/users/1" -H "Authorization: Bearer YOUR_TOKEN"
+   curl -X GET "http://localhost:50052/api/v1/users/1" -H "Authorization: Bearer YOUR_TOKEN"
    ```
 
-   gRPC-Gateway 监听在配置的 `grpc.port + 1` 端口上（默认为 8081）。
+   gRPC-Gateway 监听在配置的 `grpc.port + 1` 端口上（例如，若 gRPC 端口为 50051，则 Gateway 端口为 50052）。
 
 #### 使用 Makefile
 
@@ -193,6 +195,9 @@ make wire
 # 安装 Protobuf 相关工具
 make proto-install
 
+# 清理已生成的 Protobuf 相关文件
+make proto-clean
+
 # 生成 Protobuf 代码
 make proto-gen
 
@@ -221,6 +226,9 @@ make migrate-up
 
 # 回滚数据库迁移
 make migrate-down
+
+# 强制迁移版本以修复损坏状态 (例如 make migrate-force MIGRATE_VERSION=123)
+make migrate-force
 ```
 
 ##### 开发环境设置
@@ -241,7 +249,7 @@ make dev-deps
    列出所有可用服务：
 
    ```bash
-   grpcurl -plaintext localhost:8080 list
+   grpcurl -plaintext localhost:50051 list
    ```
 
    输出示例：
@@ -254,7 +262,7 @@ make dev-deps
    查看服务方法：
 
    ```bash
-   grpcurl -plaintext localhost:8080 list user.v1.UserService
+   grpcurl -plaintext localhost:50051 list user.v1.UserService
    ```
 
    输出示例：
@@ -273,8 +281,9 @@ make dev-deps
    grpcurl -plaintext -d '{
      "email": "test@example.com",
      "password": "Password123!",
-     "full_name": "Test User"
-   }' localhost:8080 user.v1.UserService/CreateUser
+     "firstName": "Test",
+     "lastName": "User"
+   }' localhost:50051 user.v1.UserService/CreateUser
    ```
 
    成功响应：
@@ -283,7 +292,8 @@ make dev-deps
      "user": {
        "id": "f47ac10b-58cc-4372-a567-0e02b2c3d479",
        "email": "test@example.com",
-       "fullName": "Test User",
+       "firstName": "Test",
+       "lastName": "User",
        "createdAt": "2025-06-02T00:24:15Z",
        "updatedAt": "2025-06-02T00:24:15Z"
      }
@@ -295,7 +305,7 @@ make dev-deps
    grpcurl -plaintext -d '{
      "email": "test@example.com",
      "password": "Password123!"
-   }' localhost:8080 auth.v1.AuthService/Login
+   }' localhost:50051 auth.v1.AuthService/Login
    ```
 
    成功响应：
@@ -308,7 +318,8 @@ make dev-deps
      "user": {
        "id": "f47ac10b-58cc-4372-a567-0e02b2c3d479",
        "email": "test@example.com",
-       "fullName": "Test User"
+       "firstName": "Test",
+       "lastName": "User"
      }
    }
    ```
@@ -317,7 +328,7 @@ make dev-deps
    ```bash
    grpcurl -plaintext -d '{"id": "f47ac10b-58cc-4372-a567-0e02b2c3d479"}' \
      -H 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...' \
-     localhost:8080 user.v1.UserService/GetUser
+     localhost:50051 user.v1.UserService/GetUser
    ```
 
    成功响应：
@@ -326,7 +337,8 @@ make dev-deps
      "user": {
        "id": "f47ac10b-58cc-4372-a567-0e02b2c3d479",
        "email": "test@example.com",
-       "fullName": "Test User",
+       "firstName": "Test",
+       "lastName": "User",
        "createdAt": "2025-06-02T00:24:15Z",
        "updatedAt": "2025-06-02T00:24:15Z"
      }
@@ -337,10 +349,11 @@ make dev-deps
    ```bash
    grpcurl -plaintext -d '{
      "id": "f47ac10b-58cc-4372-a567-0e02b2c3d479",
-     "fullName": "Updated User Name"
+     "firstName": "Updated",
+     "lastName": "User Name"
    }' \
      -H 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...' \
-     localhost:8080 user.v1.UserService/UpdateUser
+     localhost:50051 user.v1.UserService/UpdateUser
    ```
 
    成功响应：
@@ -349,7 +362,8 @@ make dev-deps
      "user": {
        "id": "f47ac10b-58cc-4372-a567-0e02b2c3d479",
        "email": "test@example.com",
-       "fullName": "Updated User Name",
+       "firstName": "Updated",
+       "lastName": "User Name",
        "createdAt": "2025-06-02T00:24:15Z",
        "updatedAt": "2025-06-02T00:25:30Z"
      }
@@ -360,7 +374,7 @@ make dev-deps
    ```bash
    grpcurl -plaintext -d '{
      "refreshToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
-   }' localhost:8080 auth.v1.AuthService/RefreshToken
+   }' localhost:50051 auth.v1.AuthService/RefreshToken
    ```
 
    成功响应：
@@ -382,16 +396,16 @@ make dev-deps
    npm install -g swagger-ui-cli
    
    # 启动 Swagger UI
-   swagger-ui-cli serve ./api/swagger/user_service.swagger.json
+   swagger-ui-cli serve ./docs/swagger/user_service.swagger.json
    ```
 
-   然后在浏览器中访问 http://localhost:8080 查看和测试 API。
+   然后在浏览器中访问 http://localhost:8080 (通常由 `swagger-ui-cli` 默认启动) 查看和测试 API。
 
 4. **使用 Postman**
 
    可以导入 Swagger 文档到 Postman：
    - 打开 Postman，点击 "Import" > "Import File"  
-   - 选择 `./api/swagger/user_service.swagger.json`
+   - 选择 `./docs/swagger/user_service.swagger.json`
    - Postman 将自动创建所有 API 端点的请求集合
 
 #### 构建和运行
@@ -404,9 +418,6 @@ make build
 
 # 运行应用
 make run
-
-# 构建并运行
-make build run
 ```
 
 #### 添加新功能
