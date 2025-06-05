@@ -14,7 +14,7 @@ import (
 // UserService defines the interface for user-related business logic.
 type UserService interface {
 	// Register creates a new user
-	Register(ctx context.Context, input RegisterUserInput) (*domainUser.User, error)
+	Register(ctx context.Context, input domainUser.RegisterUserInput) (*domainUser.User, error)
 
 	// GetByID retrieves a user by ID
 	GetByID(ctx context.Context, id uuid.UUID) (*domainUser.User, error)
@@ -42,7 +42,7 @@ func NewUserService(userRepo domainUser.Repository) UserService {
 }
 
 // Register creates a new user with the provided credentials
-func (s *userService) Register(ctx context.Context, input RegisterUserInput) (*domainUser.User, error) {
+func (s *userService) Register(ctx context.Context, input domainUser.RegisterUserInput) (*domainUser.User, error) {
 	// Check if user already exists
 	existingUser, err := s.userRepo.GetByEmail(ctx, input.Email)
 	if err != nil {

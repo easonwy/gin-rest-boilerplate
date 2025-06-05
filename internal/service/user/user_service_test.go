@@ -77,7 +77,7 @@ func TestRegister(t *testing.T) {
 		// Mock Create to succeed
 		mockRepo.On("Create", ctx, mock.AnythingOfType("*user.User")).Return(nil).Once()
 
-		userInput := RegisterUserInput{
+		userInput := domainUser.RegisterUserInput{
 			Email:     testUser.Email,
 			Password:  testUser.Password,
 			FirstName: testUser.FirstName,
@@ -97,7 +97,7 @@ func TestRegister(t *testing.T) {
 		existingUser := newTestUser("exists@example.com", "password123", "Existing", "User")
 		mockRepo.On("GetByEmail", ctx, existingUser.Email).Return(existingUser, nil).Once() // User found
 
-		userInput := RegisterUserInput{
+		userInput := domainUser.RegisterUserInput{
 			Email:     existingUser.Email,
 			Password:  "newpass",
 			FirstName: "New",
@@ -114,7 +114,7 @@ func TestRegister(t *testing.T) {
 	t.Run("Repository Error on GetByEmail", func(t *testing.T) {
 		mockRepo.On("GetByEmail", ctx, "error@example.com").Return(nil, errors.New("db error on get")).Once()
 
-		userInput := RegisterUserInput{
+		userInput := domainUser.RegisterUserInput{
 			Email:     "error@example.com",
 			Password:  "password",
 			FirstName: "Error",
@@ -132,7 +132,7 @@ func TestRegister(t *testing.T) {
 		mockRepo.On("GetByEmail", ctx, "createfail@example.com").Return(nil, gorm.ErrRecordNotFound).Once()
 		mockRepo.On("Create", ctx, mock.AnythingOfType("*user.User")).Return(errors.New("db error on create")).Once()
 
-		userInput := RegisterUserInput{
+		userInput := domainUser.RegisterUserInput{
 			Email:     "createfail@example.com",
 			Password:  "password",
 			FirstName: "CreateFail",

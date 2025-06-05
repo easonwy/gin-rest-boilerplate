@@ -23,8 +23,8 @@ type MockAuthService struct {
 }
 
 // Login mocks the Login method
-func (m *MockAuthService) Login(ctx context.Context, email, password string) (*domainAuth.TokenPair, error) {
-	args := m.Called(ctx, email, password)
+func (m *MockAuthService) Login(ctx context.Context, input domainAuth.LoginInput) (*domainAuth.TokenPair, error) {
+	args := m.Called(ctx, input)
 	if args.Get(0) == nil {
 		return nil, args.Error(1)
 	}
@@ -90,7 +90,7 @@ func TestLogin(t *testing.T) {
 			},
 			setupMock: func(mockService *MockAuthService) {
 				mockTokenPair := createMockDomainTokenPair()
-				mockService.On("Login", mock.Anything, "test@example.com", "password123").Return(mockTokenPair, nil)
+				mockService.On("Login", mock.Anything, domainAuth.LoginInput{Email: "test@example.com", Password: "password123"}).Return(mockTokenPair, nil)
 			},
 			expectedCode: codes.OK,
 			checkResponse: func(response *authpb.TokenResponse) {
@@ -127,7 +127,7 @@ func TestLogin(t *testing.T) {
 				Password: "wrongpassword",
 			},
 			setupMock: func(mockService *MockAuthService) {
-				mockService.On("Login", mock.Anything, "test@example.com", "wrongpassword").Return(nil, errors.New("invalid credentials"))
+				mockService.On("Login", mock.Anything, domainAuth.LoginInput{Email: "test@example.com", Password: "wrongpassword"}).Return(nil, errors.New("invalid credentials"))
 			},
 			expectedCode: codes.Unauthenticated,
 		},
@@ -138,7 +138,7 @@ func TestLogin(t *testing.T) {
 				Password: "password123",
 			},
 			setupMock: func(mockService *MockAuthService) {
-				mockService.On("Login", mock.Anything, "test@example.com", "password123").Return(nil, errors.New("database error"))
+				mockService.On("Login", mock.Anything, domainAuth.LoginInput{Email: "test@example.com", Password: "password123"}).Return(nil, errors.New("database error"))
 			},
 			expectedCode: codes.Internal,
 		},
