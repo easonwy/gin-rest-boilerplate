@@ -49,7 +49,7 @@ func (h *Handler) Register(c *gin.Context) {
 	}
 
 	// Populate RegisterUserInput from the request
-	userInput := realServiceUser.RegisterUserInput{
+	userInput := domainUser.RegisterUserInput{
 		Email:     req.Email,
 		Password:  req.Password,
 		FirstName: req.FirstName,

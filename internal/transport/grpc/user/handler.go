@@ -42,7 +42,7 @@ func (h *Handler) Register(ctx context.Context, req *userpb.RegisterRequest) (*u
 	}
 
 	// Populate RegisterUserInput
-	userInput := serviceUser.RegisterUserInput{
+	userInput := domainUser.RegisterUserInput{
 		Email:     req.Email,
 		Password:  req.Password,
 		FirstName: req.FirstName,

@@ -28,7 +28,7 @@ type MockUserService struct {
 	mock.Mock
 }
 
-func (m *MockUserService) Register(ctx context.Context, input userService.RegisterUserInput) (*domainUser.User, error) {
+func (m *MockUserService) Register(ctx context.Context, input domainUser.RegisterUserInput) (*domainUser.User, error) {
 	args := m.Called(ctx, input)
 	if args.Get(0) == nil {
 		return nil, args.Error(1)

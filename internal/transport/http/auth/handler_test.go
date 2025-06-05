@@ -26,8 +26,8 @@ type MockAuthService struct {
 }
 
 // Login mocks the Login method.
-func (m *MockAuthService) Login(ctx context.Context, email, password string) (*domainAuth.TokenPair, error) {
-	args := m.Called(ctx, email, password)
+func (m *MockAuthService) Login(ctx context.Context, input domainAuth.LoginInput) (*domainAuth.TokenPair, error) {
+	args := m.Called(ctx, input)
 	if args.Get(0) == nil {
 		return nil, args.Error(1)
 	}
@@ -99,7 +99,7 @@ func TestLogin(t *testing.T) {
 			name: "Success",
 			body: gin.H{"email": "test@example.com", "password": "password"},
 			setupMock: func(mockService *MockAuthService) {
-				mockService.On("Login", mock.AnythingOfType("*gin.Context"), "test@example.com", "password").Return(mockTokenPair, nil)
+				mockService.On("Login", mock.Anything, domainAuth.LoginInput{Email: "test@example.com", Password: "password"}).Return(mockTokenPair, nil)
 			},
 			expectedStatus: http.StatusOK,
 			expectedBody:   `{"code":200,"message":"Success","data":{"access_token":"mock-access-token","refresh_token":"mock-refresh-token","expires_in":3600}}`,
@@ -125,7 +125,7 @@ func TestLogin(t *testing.T) {
 			body: gin.H{"email": "wrong@example.com", "password": "wrong"},
 			setupMock: func(mockService *MockAuthService) {
 				// Use the actual sentinel error from the service/auth package
-				mockService.On("Login", mock.AnythingOfType("*gin.Context"), "wrong@example.com", "wrong").Return(nil, serviceAuth.ErrInvalidCredentials)
+				mockService.On("Login", mock.Anything, domainAuth.LoginInput{Email: "wrong@example.com", Password: "wrong"}).Return(nil, serviceAuth.ErrInvalidCredentials)
 			},
 			expectedStatus: http.StatusUnauthorized,
 			// The message should now match ErrInvalidCredentials.Error()
@@ -135,7 +135,7 @@ func TestLogin(t *testing.T) {
 			name: "Internal ServerError",
 			body: gin.H{"email": "error@example.com", "password": "password"},
 			setupMock: func(mockService *MockAuthService) {
-				mockService.On("Login", mock.AnythingOfType("*gin.Context"), "error@example.com", "password").Return(nil, errors.New("database error"))
+				mockService.On("Login", mock.Anything, domainAuth.LoginInput{Email: "error@example.com", Password: "password"}).Return(nil, errors.New("database error"))
 			},
 			expectedStatus: http.StatusInternalServerError,
 			expectedBody:   `{"code":500,"message":"Something went wrong. Please try again later."}`,

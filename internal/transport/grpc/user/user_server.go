@@ -34,7 +34,7 @@ func (s *UserServer) Register(ctx context.Context, req *userpb.RegisterRequest) 
 	s.logger.Info("Register request received", zap.String("email", req.Email))
 
 	// Populate RegisterUserInput
-	userInput := serviceUser.RegisterUserInput{
+	userInput := domainUser.RegisterUserInput{
 		Email:     req.Email,
 		Password:  req.Password,
 		FirstName: req.FirstName,

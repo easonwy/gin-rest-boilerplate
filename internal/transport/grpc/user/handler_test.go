@@ -24,8 +24,8 @@ type MockUserService struct {
 	mock.Mock
 }
 
-func (m *MockUserService) Register(ctx context.Context, email, password, firstName, lastName string) (*domainUser.User, error) {
-	args := m.Called(ctx, email, password, firstName, lastName)
+func (m *MockUserService) Register(ctx context.Context, input domainUser.RegisterUserInput) (*domainUser.User, error) {
+	args := m.Called(ctx, input)
 	if args.Get(0) == nil {
 		return nil, args.Error(1)
 	}
@@ -42,14 +42,6 @@ func (m *MockUserService) GetByID(ctx context.Context, id uuid.UUID) (*domainUse
 
 func (m *MockUserService) GetByEmail(ctx context.Context, email string) (*domainUser.User, error) {
 	args := m.Called(ctx, email)
-	if args.Get(0) == nil {
-		return nil, args.Error(1)
-	}
-	return args.Get(0).(*domainUser.User), args.Error(1)
-}
-
-func (m *MockUserService) UpdateUser(ctx context.Context, id uuid.UUID, firstName, lastName string) (*domainUser.User, error) {
-	args := m.Called(ctx, id, firstName, lastName)
 	if args.Get(0) == nil {
 		return nil, args.Error(1)
 	}
@@ -121,7 +113,7 @@ func TestRegister(t *testing.T) {
 			},
 			setupMock: func() {
 				mockUser := createMockUser()
-				mockService.On("Register", ctx, "test@example.com", "password123", "Test", "User").Return(mockUser, nil)
+				mockService.On("Register", ctx, domainUser.RegisterUserInput{Email: "test@example.com", Password: "password123", FirstName: "Test", LastName: "User"}).Return(mockUser, nil)
 			},
 			expectedCode: codes.OK,
 			checkResponse: func(user *userpb.User) {
@@ -152,7 +144,7 @@ func TestRegister(t *testing.T) {
 				LastName:  "User",
 			},
 			setupMock: func() {
-				mockService.On("Register", ctx, "existing@example.com", "password123", "Existing", "User").
+				mockService.On("Register", ctx, domainUser.RegisterUserInput{Email: "existing@example.com", Password: "password123", FirstName: "Existing", LastName: "User"}).
 					Return(nil, errors.New("user already exists"))
 			},
 			expectedCode: codes.AlreadyExists,
@@ -166,7 +158,7 @@ func TestRegister(t *testing.T) {
 				LastName:  "User",
 			},
 			setupMock: func() {
-				mockService.On("Register", ctx, "error@example.com", "password123", "Error", "User").
+				mockService.On("Register", ctx, domainUser.RegisterUserInput{Email: "error@example.com", Password: "password123", FirstName: "Error", LastName: "User"}).
 					Return(nil, errors.New("database error"))
 			},
 			expectedCode: codes.Internal,
@@ -386,7 +378,7 @@ func TestUpdateUser(t *testing.T) {
 				updatedUser.ID = validUUID      // Ensure the mock returns the expected ID
 				updatedUser.FirstName = "Updated"
 				updatedUser.LastName = "User" // Assuming LastName is also part of the update or should match createMockUser
-				mockService.On("UpdateUser", ctx, validUUID, "Updated", "User").Return(updatedUser, nil)
+				mockService.On("Update", ctx, validUUID, domainUser.UpdateUserParams{FirstName: "Updated", LastName: "User"}).Return(updatedUser, nil)
 			},
 			expectedCode: codes.OK,
 			checkResponse: func(user *userpb.User) {
@@ -426,7 +418,7 @@ func TestUpdateUser(t *testing.T) {
 				LastName:  "User",
 			},
 			setupMock: func(mockService *MockUserService) {
-				mockService.On("UpdateUser", ctx, validUUID, "Updated", "User").Return(nil, errors.New("user not found"))
+				mockService.On("Update", ctx, validUUID, domainUser.UpdateUserParams{FirstName: "Updated", LastName: "User"}).Return(nil, errors.New("user not found"))
 			},
 			expectedCode: codes.NotFound,
 		},
@@ -438,7 +430,7 @@ func TestUpdateUser(t *testing.T) {
 				LastName:  "User",
 			},
 			setupMock: func(mockService *MockUserService) {
-				mockService.On("UpdateUser", ctx, validUUID, "Updated", "User").Return(nil, errors.New("database error"))
+				mockService.On("Update", ctx, validUUID, domainUser.UpdateUserParams{FirstName: "Updated", LastName: "User"}).Return(nil, errors.New("database error"))
 			},
 			expectedCode: codes.Internal,
 		},
